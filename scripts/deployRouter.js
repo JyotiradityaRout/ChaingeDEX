@@ -21,71 +21,26 @@ async function main() {
   // await uniswapV2Router02.deployed();
   // console.log("Greeter deployed to:", uniswapV2Router02.address);
 
-  
-  const TokenERC20 = await hre.ethers.getContractFactory("TokenERC20");
 
-  const toeknA = await TokenERC20.deploy(18, "TokenA", "TOA");
-  await toeknA.deployed();
-  console.log('tokenA address', toeknA.address);
-
-  const toeknB = await TokenERC20.deploy(18, "TokenB", "TOB");
-  await toeknB.deployed();
-  console.log('toeknB address', toeknB.address)
-
-  console.log('start uniswapV2Factory')
-  const UniswapV2Factory = await hre.ethers.getContractFactory("UniswapV2Factory");
-  const uniswapV2Factory = await UniswapV2Factory.deploy('0x76Ee3eEb7F5B708791a805cCa590aead4777D378');
-  await uniswapV2Factory.deployed();
-  console.log('end uniswapV2Factory')
-  await sleep()
-
-  console.log('start createPair')
-  await uniswapV2Factory.createPair(toeknA.address, toeknB.address);
-  console.log('end createPair')
-  await sleep()
-
-// 路由合约
-  const ChaingeSwap = await hre.ethers.getContractFactory("ChaingeSwap");
-  const chaingeSwap = await ChaingeSwap.deploy("0x8Bc0D62BAD129C03fDc67A1d2fff321004eC50D5", "0x6F7b906f868C3fb4770f506dcdD3E7dBc72C37A2");
-  await chaingeSwap.deployed();
-  console.log("Greeter deployed to:", chaingeSwap.address);
+  const {toeknA, toeknB} = await depErc20()
 
   await sleep()
-  console.log("approve start");
-  // 给路由合约授权
-  await toeknA.approve(chaingeSwap.address, 999999999999)
-  console.log("approve end");
-  await sleep()
-  console.log("approve start");
-  await toeknB.approve(chaingeSwap.address, 999999999999)
-  console.log("approve end");
-  await sleep()
+  const {uniswapV2Factory} = await factory()
 
-  console.log("开始调用 addLiquidity");
-  console.log(await chaingeSwap.addLiquidity(
-    toeknA.address,
-    toeknB.address,
-    111,
-    11,
-    111,
-    11,
-    '0x76Ee3eEb7F5B708791a805cCa590aead4777D378',
-    9999999999999
-  ))
-  console.log('addLiquidity 完成');
+  const pair =  await createPair(uniswapV2Factory, toeknA, toeknB)
+  await sleep()
+  const uniRouter = await router(uniswapV2Factory.address, toeknA.address)
 
   await sleep()
+  await approve(uniRouter.address, toeknA, toeknB)
 
-  const swapResult = await chaingeSwap.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-    8,
-    0,
-    [toeknA.address, toeknB.address],
-    '0x76Ee3eEb7F5B708791a805cCa590aead4777D378',
-    99999999999999,
-  )
+  await sleep()
+  await addLiquidity(uniRouter, toeknA.address, toeknB.address)
 
-   console.log(swapResult)
-    console.log('完成了');
+  await sleep()
+  await swap(uniRouter, toeknA.address, toeknB.address)
+
+  await checkBalance(toeknA, toeknB)
 }
 
 // We recommend this pattern to be able to use async/await everywhere
@@ -102,6 +57,105 @@ async function sleep() {
   return new Promise(function(res, rej) {
       setTimeout(() => {
           res()
-      }, 10000)
+      }, 5000)
   })
+}
+
+async function depErc20() {
+  const TokenERC20 = await hre.ethers.getContractFactory("TokenERC20");
+
+  const toeknA = await TokenERC20.deploy(18, "TokenA", "TOA");
+  await toeknA.deployed();
+  await sleep()
+  console.log('tokenA address', toeknA.address);
+  await toeknA.mint(18000000000)
+  await sleep()
+  const toeknB = await TokenERC20.deploy(18, "TokenB", "TOB");
+  await toeknB.deployed();
+  await sleep()
+  await toeknB.mint(18000000000)
+  console.log('toeknB address', toeknB.address)
+
+  return {
+    toeknA,
+    toeknB
+  }
+}
+
+async function factory() {
+  console.log('start uniswapV2Factory')
+  const UniswapV2Factory = await hre.ethers.getContractFactory("UniswapV2Factory");
+  const uniswapV2Factory = await UniswapV2Factory.deploy('0x76Ee3eEb7F5B708791a805cCa590aead4777D378');
+  await uniswapV2Factory.deployed();
+  console.log('end uniswapV2Factory')
+  await sleep()
+  return {
+    uniswapV2Factory: uniswapV2Factory
+  }
+}
+
+async function createPair(factory, addressA, addressB) {
+  console.log('start createPair')
+  // console.log(addressA)
+  // console.log(addressB)
+  const pair = await factory.createPair(addressA.address, addressB.address);
+  console.log('end createPair')
+  return pair
+}
+
+
+async function router (factory, weth) {
+  // 路由合约
+  const Router = await hre.ethers.getContractFactory("ChaingeSwap");
+
+  const uniRouter = await Router.deploy(factory, weth);
+
+  await uniRouter.deployed();
+  console.log("Greeter deployed to:", uniRouter.address);
+  return uniRouter
+}
+
+async function approve(routerAddress, tokenA, tokenB) {
+  console.log("approve start");
+  // 给路由合约授权
+  await tokenA.approve(routerAddress, 999999999999)
+  console.log("approve end");
+  await sleep()
+  console.log("approve start");
+  await tokenB.approve(routerAddress, 999999999999)
+  console.log("approve end");
+}
+
+async function addLiquidity(uniRouter, addressA, addressB) {
+  console.log("开始调用 addLiquidity");
+  console.log(await uniRouter.addLiquidity(
+    addressA,
+    addressB,
+    11100000000,
+    10001,
+    11100000000,
+    10001,
+    '0x76Ee3eEb7F5B708791a805cCa590aead4777D378',
+    9999999999999
+  ))
+  console.log('addLiquidity 完成');
+}
+
+async function swap(uniRouter, addressA, addressB) {
+  const swapResult = await uniRouter.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+    8000000,
+    7,
+    [addressA, addressB],
+    '0x76Ee3eEb7F5B708791a805cCa590aead4777D378',
+    99999999999999,
+  )
+    console.log(swapResult)
+    console.log('完成了swap');
+}
+
+async function checkBalance(tokenA, tokenB) {
+  const balanceA = await tokenA.balanceOf('0x76Ee3eEb7F5B708791a805cCa590aead4777D378')
+  const balanceB = await tokenB.balanceOf('0x76Ee3eEb7F5B708791a805cCa590aead4777D378')
+
+  console.log(parseInt(balanceA._hex), parseInt(balanceB._hex));
 }

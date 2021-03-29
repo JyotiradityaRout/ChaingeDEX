@@ -20,8 +20,8 @@ module.exports = {
   defaultNetwork: "fns",
   networks: {
     fns: {
-      // url: "http://47.242.22.229:8645",
-      url: 'https://mainnet.anyswap.exchange',
+      url: "http://47.242.22.229:8645",
+      // url: 'https://mainnet.anyswap.exchange',
       accounts: ['4d53bcdfc5312a3de2e6a15b2112d307edc2366bf8f76b61b715d3fb51b510f7']
     },
     ropsten: {

@@ -12,18 +12,19 @@ import '@uniswap/v2-periphery/contracts/libraries/SafeMath.sol';
 import '@uniswap/v2-periphery/contracts/interfaces/IERC20.sol';
 import '@uniswap/v2-periphery/contracts/interfaces/IWETH.sol';
 
+import "@nomiclabs/buidler/console.sol";
 
 library UniswapV2Library {
     using SafeMath for uint;
-    function pairFor(address factory, address tokenA, address tokenB) internal pure returns (address pair) {
+    function pairFor(address factory, address tokenA, address tokenB) internal view returns (address pair) {
         (address token0, address token1) = sortTokens(tokenA, tokenB);
-        pair = address(uint(keccak256(abi.encodePacked(
-                hex'ff',
-                factory,
-                keccak256(abi.encodePacked(token0, token1)),
-                hex'96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f' // init code hash
-            ))));
-        // pair = IUniswapV2Factory(factory).getPair(tokenA, tokenB);
+        // pair = address(uint(keccak256(abi.encodePacked(
+        //         hex'ff',
+        //         factory,
+        //         keccak256(abi.encodePacked(token0, token1)),
+        //         hex'96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f' // init code hash
+        //     ))));
+        pair = IUniswapV2Factory(factory).getPair(tokenA, tokenB);
     }
     // returns sorted token addresses, used to handle return values from pairs sorted in this order
     function sortTokens(address tokenA, address tokenB) internal pure returns (address token0, address token1) {
@@ -157,10 +158,10 @@ contract ChaingeSwap is IUniswapV2Router02 {
         address pair = IUniswapV2Factory(factory).getPair(tokenA, tokenB);
         TransferHelper.safeTransferFrom(tokenA, msg.sender, pair, amountA);
         TransferHelper.safeTransferFrom(tokenB, msg.sender, pair, amountB);
-        // liquidity = IUniswapV2Pair(pair).mint(to);
+        liquidity = IUniswapV2Pair(pair).mint(to);
         // amountA = 0;
         // amountB = 0;
-        liquidity = 0;
+        // liquidity = 0;
     }
     function addLiquidityETH(
         address token,
@@ -418,11 +419,20 @@ contract ChaingeSwap is IUniswapV2Router02 {
             (uint reserve0, uint reserve1,) = pair.getReserves();
             (uint reserveInput, uint reserveOutput) = input == token0 ? (reserve0, reserve1) : (reserve1, reserve0);
             amountInput = IERC20(input).balanceOf(address(pair)).sub(reserveInput);
-            amountOutput = UniswapV2Library.getAmountOut(amountInput, reserveInput, reserveOutput);
-            }
-            (uint amount0Out, uint amount1Out) = input == token0 ? (uint(0), amountOutput) : (amountOutput, uint(0));
-            address to = i < path.length - 2 ? UniswapV2Library.pairFor(factory, output, path[i + 2]) : _to;
 
+            amountOutput = UniswapV2Library.getAmountOut(amountInput, reserveInput, reserveOutput);
+                
+            // console.log('三个参数',amountInput, reserveInput, reserveOutput);
+
+            }
+
+            console.log(input, token0, amountOutput);
+            console.log("amountOutput:", amountOutput);
+            (uint amount0Out, uint amount1Out) = input == token0 ? (uint(0), amountOutput) : (amountOutput, uint(0));
+
+            address to = i < path.length - 2 ? UniswapV2Library.pairFor(factory, output, path[i + 2]) : _to;
+            
+            console.log(amount0Out, amount1Out, to);
             pair.swap(amount0Out, amount1Out, to, new bytes(0));
         }
     }
@@ -439,10 +449,17 @@ contract ChaingeSwap is IUniswapV2Router02 {
     
         uint balanceBefore = IERC20(path[path.length - 1]).balanceOf(to);
         _swapSupportingFeeOnTransferTokens(path, to);
+
+        {
+        //  console.log('success');
+        // console.log('amountOutMin',amountOutMin );
+        // console.log(IERC20(path[path.length - 1]).balanceOf(to).sub(balanceBefore));
         require(
             IERC20(path[path.length - 1]).balanceOf(to).sub(balanceBefore) >= amountOutMin,
             'UniswapV2Router: INSUFFICIENT_OUTPUT_AMOUNT'
         );
+        }
+    
     }
     function swapExactETHForTokensSupportingFeeOnTransferTokens(
         uint amountOutMin,
