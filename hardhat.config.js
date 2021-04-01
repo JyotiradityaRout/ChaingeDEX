@@ -78,9 +78,32 @@ module.exports = {
             }
           }
         }
+      },
+      {
+        version: "0.7.6",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 999999
+          },
+          // evmVersion: "istanbul",
+          evmVersion: "byzantium",
+          outputSelection: {
+            "*": {
+              "*": [
+                "evm.bytecode.object",
+                "evm.deployedBytecode.object",
+                "abi",
+                "evm.bytecode.sourceMap",
+                "evm.deployedBytecode.sourceMap",
+                "metadata"
+              ],
+              "": ["ast"]
+            }
+          }
+        }
       }
     ]
   
   }
 };
-

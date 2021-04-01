@@ -48,14 +48,6 @@ contract TokenERC20 {
         allowance[msg.sender][_spender] = _value;
         return true;
     }
-
-    // function approveAndCall(address _spender, uint256 _value, bytes memory _extraData) public returns (bool success) {
-    //     tokenRecipient spender = tokenRecipient(_spender);
-    //     if (approve(_spender, _value)) {
-    //         spender.receiveApproval(msg.sender, _value, this, _extraData);
-    //         return true;
-    //     }
-    // }
     
     function mint(uint256 _value)  public returns (bool success)  {
         balanceOf[msg.sender] += _value;
