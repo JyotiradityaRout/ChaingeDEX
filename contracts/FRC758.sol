@@ -1,65 +1,5 @@
-// SPDX-License-Identifier: UNLICENSED
+//SPDX-License-Identifier: MIT
 pragma solidity =0.7.6;
-
-// import './interfaces/IFRC758.sol';
-import "@nomiclabs/buidler/console.sol";
-//Make the contract Ownable by someone.
-abstract contract Ownable {
-    address public owner;
-
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-
-    function _validateAddress2(address _addr) internal pure {
-        require(_addr != address(0), "invalid address");
-    }
-
-    constructor() {
-        owner = msg.sender;
-    }
-
-    modifier onlyOwner() {
-        require(msg.sender == owner, "not a contract owner");
-        _;
-    }
-
-    //transfer the ownership to the new address.
-    function transferOwnership(address newOwner) external onlyOwner {
-        _validateAddress2(newOwner);
-        owner = newOwner;
-        emit OwnershipTransferred(owner, newOwner);
-    }
-}
-
-
-
-contract Controllable is Ownable {
-    mapping(address => bool) controllers;
-
-    modifier onlyController {
-        require(_isController(msg.sender), "no controller rights");
-        _;
-    }
-
-    function _isController(address _controller) internal view returns (bool) {
-        //owner defaults to controller
-        return msg.sender == owner || controllers[_controller];
-    }
-
-    function addControllers(address[] calldata _controllers) external onlyOwner {
-        for (uint256 i = 0; i < _controllers.length; i++) {
-            _validateAddress2(_controllers[i]);
-            controllers[_controllers[i]] = true;
-        }
-    }
-    
-    function removeControllers(address[] calldata _controllers) external onlyOwner {
-        for (uint256 i = 0; i < _controllers.length; i++) {
-            _validateAddress2(_controllers[i]);
-            controllers[_controllers[i]] = false;
-        }
-    }
-}
-
 
 library SafeMath256 {
     function mul(uint256 a, uint256 b) internal pure returns (uint256) {
@@ -96,38 +36,80 @@ library SafeMath256 {
     }
 }
 
-//Contracts implemented onTimeSlicedTokenReceived and returned proper bytes is treated as Time Sliced Token safe.
-abstract contract ITimeSlicedTokenReceiver {
-    function onTimeSlicedTokenReceived(address _operator, address _from, uint256 amount, uint256 newTokenStart, uint256 newTokenEnd, bytes memory _data ) virtual public returns(bytes4);
+abstract contract Ownable {
+    address public owner;
+
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
+    function _validateAddress2(address _addr) internal pure {
+        require(_addr != address(0), "invalid address");
+    }
+
+    constructor() {
+        owner = msg.sender;
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "not a contract owner");
+        _;
+    }
+
+    function transferOwnership(address newOwner) external onlyOwner {
+        _validateAddress2(newOwner);
+        owner = newOwner;
+        emit OwnershipTransferred(owner, newOwner);
+    }
 }
 
+abstract contract Controllable is Ownable {
+    mapping(address => bool) controllers;
 
+    modifier onlyController {
+        require(_isController(msg.sender), "no controller rights");
+        _;
+    }
+
+    function _isController(address _controller) internal view returns (bool) {
+        //owner defaults to controller
+        return msg.sender == owner || controllers[_controller];
+    }
+
+    function addControllers(address[] calldata _controllers) external onlyOwner {
+        for (uint256 i = 0; i < _controllers.length; i++) {
+            _validateAddress2(_controllers[i]);
+            controllers[_controllers[i]] = true;
+        }
+    }
+    
+    function removeControllers(address[] calldata _controllers) external onlyOwner {
+        for (uint256 i = 0; i < _controllers.length; i++) {
+            _validateAddress2(_controllers[i]);
+            controllers[_controllers[i]] = false;
+        }
+    }
+}
 
 interface IFRC758 {
-    event Transfer(address indexed _from, address indexed _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd, uint256 newTokenStart, uint256 newTokenEnd);
+    event Transfer(address indexed _from, address indexed _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd);
     event ApprovalForAll(address indexed _owner, address indexed _operator, bool _approved);
 
-    // function balanceOf(address _owner) external view returns (uint256[] memory _amount, uint256[] memory _tokenStart, uint256[] memory _tokenEnd);
-    function balanceOf(address _owner, uint256 startTime, uint256 endTime, bool strict) external view returns (uint256);
-
-    function setApprovalForAll(address _operator, bool _approved) external;
-    function isApprovedForAll(address _owner, address _operator) external view returns (bool);
-
-    function transferFrom(address _from, address _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd, uint256 newTokenStart, uint256 newTokenEnd) external;
-    function safeTransferFrom(address _from, address _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd, uint256 newTokenStart, uint256 newTokenEnd) external;
-    function safeTransferFrom(address _from, address _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd, uint256 newTokenStart, uint256 newTokenEnd, bytes calldata _data) external;
-
-    function totalSupply() external view returns (uint256);
     function name() external view returns (string memory);
     function symbol() external view returns (string memory);
     function decimals() external view returns (uint256);
-
-   //   function onTimeSlicedTokenReceived(address _operator, address _from, uint256 amount, uint256 newTokenStart, uint256 newTokenEnd, bytes calldata _data) external returns(bytes4);
+    function totalSupply() external view returns (uint256);
+    function sliceOf(address _owner) external view returns (uint256[] memory, uint256[] memory, uint256[] memory);
+    function balanceOf(address _owner, uint256 tokenStart, uint256 tokenEnd) external view returns (uint256);
+    function setApprovalForAll(address _operator, bool _approved) external;
+    function isApprovedForAll(address _owner, address _operator) external view returns (bool);
+    function transferFrom(address _from, address _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd) external;
+    function safeTransferFrom(address _from, address _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd) external;
 }
 
+interface ITimeSlicedTokenReceiver {
+    function onTimeSlicedTokenReceived(address _operator, address _from, uint256 amount, uint256 newTokenStart, uint256 newTokenEnd )  external returns(bytes4);
+}
 
-abstract contract BasicTimeSlicedToken is IFRC758 {
-
+abstract contract FRC758 is IFRC758 {
     string internal name_;
     string internal symbol_;
     uint256 internal decimals_;
@@ -152,93 +134,112 @@ abstract contract BasicTimeSlicedToken is IFRC758 {
     
     using SafeMath256 for uint256;
 
-    // Equals to `bytes4(keccak256("onTimeSlicedTokenReceived(address,address,uint256,uint256,uint256,bytes)"))`
-    bytes4 private constant _TIMESLICEDTOKEN_RECEIVED = 0xb005a606; 
+    bytes4 private constant _TIMESLICEDTOKEN_RECEIVED = 0xb005a606;
     
     uint256 public constant MAX_UINT = 2**256 - 1;
 
     uint256 public constant MAX_TIME = 666666666666;
-
-    uint256 public constant MAX_BLOCKNUMBER = 999999999; //above this will be treated as timestamp
     
     struct SlicedToken {
-        uint256 amount; //token amount
-        uint256 tokenStart; //token start blockNumber or timestamp (in secs from unix epoch)
-        uint256 tokenEnd; //token end blockNumber or timestamp, use MAX_UINT for timestamp, MAX_BLOCKNUMBER for blockNumber.
+        uint256 amount;
+        uint256 tokenStart;
+        uint256 tokenEnd;
+        uint256 next;
     }
     
-    // Mapping from owner to a map of SlicedToken
     mapping (address => mapping (uint256 => SlicedToken)) internal balances;
-    
-    // Mapping from owner to number of SlicedToken struct（record length of balances）
     mapping (address => uint256) internal ownedSlicedTokensCount;
-
-    // Mapping from owner to operator approvals
     mapping (address => mapping (address => bool)) internal operatorApprovals;
-    
     uint256 internal _totalSupply;
+    mapping (address => uint256 ) headerIndex;
 
     function _checkRights(bool _has) internal pure {
         require(_has, "no rights to manage");
     }
 
-    //address should be non-zero
     function _validateAddress(address _addr) internal  pure {
         require(_addr != address(0), "invalid address");
     }
     
-    //amount should be greater than 0
     function _validateAmount(uint256 amount) internal pure {
         require(amount > 0, "invalid amount");
     }
+
+    function totalSupply() public view override returns (uint256) {
+        return _totalSupply;
+    }
     
-    //validate tokenStart and tokenEnd
     function _validateTokenStartAndEnd(uint256 tokenStart, uint256 tokenEnd) internal view {
         require(tokenEnd >= tokenStart, "tokenStart greater than tokenEnd");
-        require(tokenStart > MAX_BLOCKNUMBER || tokenEnd <= MAX_BLOCKNUMBER, "mix timestamp and blockNumber");
-        require((tokenEnd > MAX_BLOCKNUMBER && tokenEnd >= block.timestamp) || (tokenEnd <= MAX_BLOCKNUMBER && tokenEnd >= block.number), "blockEnd less than current blockNumber or timestamp");
+        require((tokenEnd >= block.timestamp) || (tokenEnd >= block.number), "blockEnd less than current blockNumber or timestamp");
     }
 
-    // function balanceOf(address _owner) external view override returns (uint256[] memory, uint256[] memory, uint256[] memory) {
-    //     _validateAddress(_owner);
-    //     uint256 count = ownedSlicedTokensCount[_owner];
-    //     //SlicedToken[] memory tokens = new SlicedToken[](count);
-        
-    //     uint256[] memory amountArray = new uint256[](count);
-    //     uint256[] memory tokenStartArray = new uint256[](count);
-    //     uint256[] memory tokenEndArray = new uint256[](count);
-        
-    //     for (uint256 ii = 0; ii < count; ii++) {
-    //         amountArray[ii] = balances[_owner][ii].amount;
-    //         tokenStartArray[ii] = balances[_owner][ii].tokenStart;
-    //         tokenEndArray[ii] = balances[_owner][ii].tokenEnd;
-    //     }
-        
-    //     return (amountArray, tokenStartArray, tokenEndArray);
-    // }
-    
-    function balanceOf(address _owner, uint256 startTime, uint256 endTime, bool strict) external view override returns (uint256)  {
-        _validateAddress(_owner);
-        uint256 count = ownedSlicedTokensCount[_owner];
-        
-        uint256 amount = 0;
-        
-        if(strict) {
-            for (uint256 ii = 0; ii < count; ii++) {
-                if(balances[_owner][ii].tokenStart == startTime && balances[_owner][ii].tokenEnd == endTime) {
-                    amount +=  balances[_owner][ii].amount;
+    function sliceOf(address from) public view override returns (uint256[] memory, uint256[] memory, uint256[] memory) {
+        _validateAddress(from);
+       uint header = headerIndex[from];
+       if(header == 0) {
+           return (new uint256[](0), new uint256[](0), new uint256[](0));
+       }
+        uint256 count = 0;
+     
+        while(header > 0) {
+                SlicedToken memory st = balances[from][header];
+                if(block.timestamp < st.tokenEnd) {
+                    count++;
                 }
-             }
-        } else {
-            console.log('000---------', count);
-            for (uint256 ii = 0; ii < count; ii++) {
-                if(balances[_owner][ii].tokenStart <= startTime && balances[_owner][ii].tokenEnd >= endTime) {
-                    amount +=  balances[_owner][ii].amount;
-                }
-            }
+                header = st.next;
         }
+        uint256 allCount = ownedSlicedTokensCount[from];
+        uint256[] memory amountArray = new uint256[](count);
+        uint256[] memory tokenStartArray = new uint256[](count);
+        uint256[] memory tokenEndArray = new uint256[](count);
+        
+        uint256 i = 0;
+        for (uint256 ii = 1; ii < allCount+1; ii++) {
+            if(block.timestamp >= balances[from][ii].tokenEnd) {
+               continue;
+            }
+            amountArray[i] = balances[from][ii].amount;
+            tokenStartArray[i] = balances[from][ii].tokenStart;
+            tokenEndArray[i] = balances[from][ii].tokenEnd;
+            i++;
+        }
+        
+        return (amountArray, tokenStartArray, tokenEndArray);
+    }
+
+    function balanceOf(address from, uint256 tokenStart, uint256 tokenEnd) public override view returns(uint256) {
+       if (tokenStart >= tokenEnd) {
+           return 0;
+       }
+       uint256 next = headerIndex[from];
+       if(next == 0) {
+           return 0;
+       }
+       uint256 amount = 0;   
+        while(next > 0) {
+                SlicedToken memory st = balances[from][next];
+                if( tokenStart < st.tokenStart || (st.next == 0 && tokenEnd > st.tokenEnd)) {
+                    amount = 0;
+                    break;
+                }
+                if(tokenStart >= st.tokenEnd) {
+                    next = st.next;
+                    continue;
+                }
+                if(amount == 0 || amount > st.amount) {
+                    amount =  st.amount;
+                }
+                if(tokenEnd <= st.tokenEnd) {
+                   break;
+                }
+                tokenStart = st.tokenEnd;
+                next = st.next;
+        }
+
         return amount;
     }
+
 
     function setApprovalForAll(address _to, bool _approved) public override {
         require(_to != msg.sender, "wrong approval destination");
@@ -250,208 +251,249 @@ abstract contract BasicTimeSlicedToken is IFRC758 {
         return operatorApprovals[_owner][_operator];
     }
 
-    //the _spender is trying to spend assets from _from
     function isApprovedOrOwner(address _spender, address _from) public view returns (bool) {
         return _spender == _from || isApprovedForAll(_from, _spender);
     }
 
-    function transferFrom(address _from, address _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd, uint256 newTokenStart, uint256 newTokenEnd) public override {
+    function transferFrom(address _from, address _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd) public override {
         _validateAddress(_from);
         _validateAddress(_to);
         _validateAmount(amount);
         _checkRights(isApprovedOrOwner(msg.sender, _from));
         require(_from != _to, "no sending to yourself");
 
-        bool _removed = removeTokenFrom(_from, amount, tokenStart, tokenEnd, newTokenStart, newTokenEnd);
-        require(_removed, "no token removed");
-        addTokenTo(_to, amount, newTokenStart, newTokenEnd);
-
-        emit Transfer(_from, _to, amount, tokenStart, tokenEnd, newTokenStart, newTokenEnd);
+        SlicedToken memory st = SlicedToken({amount: amount, tokenStart: tokenStart, tokenEnd: tokenEnd, next: 0});
+        _subSliceFromBalance(_from, st);
+        _addSliceToBalance(_to, st);
+        emit Transfer(_from, _to, amount, tokenStart, tokenEnd);
     }
 
-    function safeTransferFrom(address _from, address _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd, uint256 newTokenStart, uint256 newTokenEnd) public override {
-        // safeTransferFrom(_from, _to, amount, tokenStart, tokenEnd, newTokenStart, newTokenEnd, "");
+
+    function safeTransferFrom(address _from, address _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd) public override {
+        transferFrom(_from, _to, amount, tokenStart, tokenEnd);
+        require(checkAndCallSafeTransfer(_from, _to, amount, tokenStart, tokenEnd), "can't make safe transfer");
     }
 
-    function safeTransferFrom(address _from, address _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd, uint256 newTokenStart, uint256 newTokenEnd, bytes memory _data) public override {
-        transferFrom(_from, _to, amount, tokenStart, tokenEnd, newTokenStart, newTokenEnd);
-        require(checkAndCallSafeTransfer(_from, _to, amount, newTokenStart, newTokenEnd, _data), "can't make safe transfer");
-    }
-
-    function _mint(address _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd) internal {
-        _validateAddress(_to);
+    function _mint(address _from,  uint256 amount, uint256 tokenStart, uint256 tokenEnd) internal {
+        _validateAddress(_from);
         _validateAmount(amount);
-        addTokenTo(_to, amount, tokenStart, tokenEnd);
-        
-        //only increase totalSupply when mint whole token.
-        if (tokenStart == 0 && (tokenEnd == MAX_BLOCKNUMBER || tokenEnd == MAX_UINT)) {
-            _totalSupply += amount;
-        }
-        emit Transfer(address(0), _to, amount, tokenStart, tokenEnd, tokenStart, tokenEnd);
+        SlicedToken memory st = SlicedToken({amount: amount, tokenStart: tokenStart, tokenEnd: tokenEnd, next: 0});
+        _addSliceToBalance(_from, st);
+        emit Transfer(address(0), _from, amount, tokenStart, tokenEnd);
     }
 
-    function _burn(address _owner, uint256 amount, uint256 tokenStart, uint256 tokenEnd) internal {
-        _validateAddress(_owner);
+    function _burn(address _from, uint256 amount, uint256 tokenStart, uint256 tokenEnd) internal {
+        _validateAddress(_from);
         _validateAmount(amount);
-        removeTokenFrom(_owner, amount, tokenStart, tokenEnd, tokenStart, tokenEnd);
-        
-        //only decrease totalSupply when mint whole token.
-        if (tokenStart == 0 && (tokenEnd == MAX_BLOCKNUMBER || tokenEnd == MAX_UINT)) {
-            _totalSupply -= amount;
-        }
-        emit Transfer(_owner, address(0), amount, tokenStart, tokenEnd, tokenStart, tokenEnd);
-    }
-    
-    function totalSupply() public view override returns (uint256) {
-        return _totalSupply;
+        SlicedToken memory st = SlicedToken({amount: amount, tokenStart: tokenStart, tokenEnd: tokenEnd, next: 0});
+        _subSliceFromBalance(_from, st);
+        emit Transfer(_from, address(0), amount, tokenStart, tokenEnd);
     }
 
-    //_from should already checked isApprovedOrOwner
-    function removeTokenFrom(address _from, uint256 amount, uint256 tokenStart, uint256 tokenEnd, uint256 newTokenStart, uint256 newTokenEnd) internal returns (bool) {
-        _validateTokenStartAndEnd(newTokenStart, newTokenEnd);
-        
-        return _removeToken(_from, amount, tokenStart, tokenEnd, newTokenStart, newTokenEnd);
-    }
-    
-    function _removeToken(address _from, uint256 amount, uint256 tokenStart, uint256 tokenEnd, uint256 newTokenStart, uint256 newTokenEnd) internal returns (bool) {
-        //already validated in _validateTokenStartAndEnd
-        //require(newTokenEnd >= newTokenStart, "newTokenEnd should >= newTokenStart");
-        uint256 count = ownedSlicedTokensCount[_from];
-        for (uint ii = 0; ii < count; ii++) {
-            SlicedToken storage st = balances[_from][ii];
-            if (st.tokenStart == tokenStart && st.tokenEnd == tokenEnd) {
-                
-                if (amount > st.amount) {
-                    revert(); //amount more than owned
-                }
-                
-                if (amount < st.amount) {
-                    //split into two
-                    balances[_from][count] = SlicedToken({amount: st.amount - amount, tokenStart: tokenStart, tokenEnd: tokenEnd});
-                    ownedSlicedTokensCount[_from] = count + 1;
-                    st.amount = amount;
-                    
-                    return _removeToken(_from, amount, tokenStart, tokenEnd, newTokenStart, newTokenEnd);
-                }
-                
-                //send the entire token
-                if (newTokenStart == tokenStart  && newTokenEnd == tokenEnd) {
-                    st.amount = 0;
-                    return _mergeTheSame(_from);
-                } else if (newTokenStart == tokenStart && newTokenEnd < tokenEnd) {
-                    //split into two
-                    balances[_from][count] = SlicedToken({amount: amount, tokenStart: newTokenEnd + 1, tokenEnd: tokenEnd});
-                    ownedSlicedTokensCount[_from] = count + 1;
-                    st.amount = 0;
-                    return _mergeTheSame(_from);
-                } else if (newTokenStart > tokenStart && newTokenEnd == tokenEnd) {
-                    //split into two
-                    balances[_from][count] = SlicedToken({amount: amount, tokenStart: tokenStart, tokenEnd: newTokenStart - 1});
-                    ownedSlicedTokensCount[_from] = count + 1;
-                    st.amount = 0;
-                    return _mergeTheSame(_from);
-                } else if (newTokenStart > tokenStart && newTokenEnd < tokenEnd) {
-                    //split into three
-                    balances[_from][count] = SlicedToken({amount: amount, tokenStart: tokenStart, tokenEnd: newTokenStart - 1});
-                    balances[_from][count + 1] = SlicedToken({amount: amount, tokenStart: newTokenEnd + 1, tokenEnd: tokenEnd});
-                    ownedSlicedTokensCount[_from] = count + 2;
-                    st.amount = 0;
-                    return _mergeTheSame(_from);
-                } else {
-                    revert(); //newTokenStart or newTokenEnd invalid
-                }
-            }
+    function _addSliceToBalance(address addr, SlicedToken memory st) internal {
+        uint256 count = ownedSlicedTokensCount[addr];
+        if(count == 0) {
+             balances[addr][1] = st;
+             ownedSlicedTokensCount[addr] = 1;
+             headerIndex[addr] = 1;
+             return;
         }
-        
-        //no match found
-        return false;
-    }
-    
-    //_to, amount is verified in the caller func
-    function addTokenTo(address _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd) internal {
-        _validateTokenStartAndEnd(tokenStart, tokenEnd);
-        
-        _addToken(_to, amount, tokenStart, tokenEnd);
-        _mergeTheSame(_to);
-    }
-    
-    function _addToken(address _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd) internal {
-        uint256 count = ownedSlicedTokensCount[_to];
-        
-        for (uint ii = 0; ii < count; ii++) {
-            SlicedToken storage st = balances[_to][ii];
-            if (st.amount == amount) {
-                if (tokenStart == st.tokenEnd + 1) {
-                    st.tokenEnd = tokenEnd;
-                }
-                if (tokenEnd == st.tokenStart -1) {
-                    st.tokenStart = tokenStart;
-                }
-                //merge 
-                return;
-            }
-        }
-        
-        for (uint ii = 0; ii < count; ii++) {
-            SlicedToken storage st = balances[_to][ii];
-            if (st.tokenStart == tokenStart && st.tokenEnd == tokenEnd) {
-                //merge 
-                st.amount += amount;
-                return;
-            }
-        }
-        
-        //if not merged
-        balances[_to][count] = SlicedToken({amount: amount, tokenStart: tokenStart, tokenEnd: tokenEnd});
-        ownedSlicedTokensCount[_to] = count + 1;
-    }
-    
-    //return true if some items merged
-    function _mergeTheSame(address _owner) internal returns (bool) {
-        uint256 count = ownedSlicedTokensCount[_owner];
-        
-        for (uint ii = 0; ii < count; ii++) {
-            SlicedToken storage sti = balances[_owner][ii];
-            
-            for (uint jj = 0; jj < ii; jj++) {
-                SlicedToken storage stj = balances[_owner][jj];
-                
-                if (sti.tokenStart == stj.tokenStart && sti.tokenEnd == stj.tokenEnd) {
-                    stj.amount += sti.amount;
-                    sti.amount = 0;
-                }
-            }
-        }
-        
-        return _removeEmpty(_owner);
-    }
-    
-    //return true if some empty items removed.
-    function _removeEmpty(address _owner) internal returns (bool) {
-        uint256 count = ownedSlicedTokensCount[_owner];
-        
-        uint index = 0;
-        for (uint ii = 0; ii < count; ii++) {
-            SlicedToken storage sti = balances[_owner][ii];
-            
-            //amount 0
-            if (sti.amount == 0) {
+
+        uint256 current = headerIndex[addr];
+               
+        do {
+            SlicedToken storage currSt = balances[addr][current];
+            if(st.tokenStart >= currSt.tokenEnd && currSt.next != 0 ) {
+                current = currSt.next;
                 continue;
             }
-            
-            //tokenStart or tokenEnd wrong
-            if (sti.tokenStart > sti.tokenEnd) {
+    
+            if (currSt.tokenStart >= st.tokenEnd) {
+                uint256 index = _addSlice(addr, st.tokenStart, st.tokenEnd, st.amount, current);
+                if(current == headerIndex[addr]) {
+                    headerIndex[addr] = index; 
+                }
+                return;
+            }
+
+            if(currSt.tokenStart < st.tokenEnd && currSt.tokenStart > st.tokenStart) {
+                uint256 index = _addSlice(addr, st.tokenStart, currSt.tokenStart, st.amount, current);
+                if(current == headerIndex[addr]) {
+                    headerIndex[addr] = index;  
+                }else {
+                    uint256 _current = headerIndex[addr];
+                    while(_current>0) {
+                        if(balances[addr][_current].next == current)  {
+                            balances[addr][_current].next = index;
+                            break;
+                        }
+                        _current = balances[addr][_current].next;
+                    }
+                }
+
+                st.tokenStart = currSt.tokenStart;
                 continue;
             }
-            
-            balances[_owner][index] = sti;
-            
-            index++;
+            if(currSt.tokenStart == st.tokenStart && currSt.tokenEnd == st.tokenEnd) { 
+                _mergeAmount(currSt, st.amount);
+                return;
+            }
+            if(currSt.tokenEnd >= st.tokenEnd) {  
+                if(currSt.tokenStart < st.tokenStart) {
+                    uint256 currStEndTime = currSt.tokenEnd ;
+                    uint256 currStNext = currSt.next;
+                    currSt.tokenEnd = st.tokenStart;
+
+                    uint256 innerIndex = _addSlice(addr, st.tokenStart, st.tokenEnd, st.amount + currSt.amount, 0);
+                    currSt.next = innerIndex;
+
+                    if(currStEndTime > st.tokenEnd) {
+                        uint256 rightIndex = _addSlice(addr, st.tokenEnd, currStEndTime, currSt.amount, currStNext);
+                        balances[addr][innerIndex].next = rightIndex;
+                    }
+                    return;
+                }
+                 uint256 currStTokenEnd =  currSt.tokenEnd;
+                 uint256 currStAmount = currSt.amount;
+                if(currSt.tokenStart == st.tokenStart) {
+                    currSt.tokenEnd = st.tokenEnd;
+                    _mergeAmount(currSt, st.amount);
+                    uint256 index = _addSlice(addr, st.tokenEnd, currStTokenEnd, currStAmount, currSt.next);
+                    currSt.next = index;
+                    return;
+                }
+            }
+            if( currSt.tokenEnd > st.tokenStart && currSt.tokenEnd >= st.tokenStart) {
+                  uint256 currStTokenEnd = currSt.tokenEnd;
+                  if(currSt.tokenStart < st.tokenStart) {
+                    currSt.tokenEnd = st.tokenStart; 
+                    uint256 index = _addSlice(addr, st.tokenStart, currStTokenEnd, currSt.amount + st.amount, currSt.next);
+                    currSt.next = index;
+                    st.tokenStart = currStTokenEnd;
+                    current = currSt.next;
+                    if(current != 0) {
+                        continue;
+                    }
+                  }
+                  currSt.tokenStart = st.tokenStart;
+                  _mergeAmount(currSt, st.amount);
+                  current = currSt.next;
+                  if(current != 0) {
+                    st.tokenStart = currSt.tokenEnd;
+                    continue;
+                  }
+
+                st.tokenStart = currSt.tokenEnd;
+                balances[addr][ownedSlicedTokensCount[addr] +1] = st;
+                currSt.next = ownedSlicedTokensCount[addr] +1;
+                ownedSlicedTokensCount[addr] += 1;
+                return;
+            }
+  
+            if(currSt.next == 0 && currSt.tokenEnd <= st.tokenStart) {
+                uint256 index = _addSlice(addr, st.tokenStart, st.tokenEnd, st.amount, 0);
+                currSt.next = index;
+                return;
+            }
+
+            current = currSt.next;
+        }while(current>0);
+    }
+
+    function _mergeAmount(SlicedToken storage currSt, uint256 amount) internal {
+        currSt.amount += amount;
+    }
+
+    function _addSlice(address addr, uint256 tokenStart, uint256 tokenEnd, uint256 amount, uint256 next) internal returns (uint256) {
+         balances[addr][ownedSlicedTokensCount[addr] +1] = SlicedToken({amount: amount , tokenStart: tokenStart, tokenEnd: tokenEnd, next: next});
+         ownedSlicedTokensCount[addr] += 1;
+         return ownedSlicedTokensCount[addr];
+    }
+    function _subSliceFromBalance(address addr, SlicedToken memory st) internal {
+        uint256 count = ownedSlicedTokensCount[addr];
+
+        if(count == 0) {
+            revert();
         }
-        
-        ownedSlicedTokensCount[_owner] = index;
-        
-        return index < count;
+
+        uint256 current = headerIndex[addr];
+        do {
+            SlicedToken storage currSt = balances[addr][current]; 
+
+            if(currSt.tokenEnd < block.timestamp) { 
+                headerIndex[addr] = currSt.next; 
+                current = currSt.next;
+                continue;
+            }
+            if(st.amount > currSt.amount) {
+                revert();
+            }
+
+            if (currSt.tokenStart >= st.tokenEnd) { 
+                 revert();
+            }
+            if(currSt.next == 0 && currSt.tokenEnd < st.tokenEnd) { 
+                 revert();
+            }
+
+            if(currSt.tokenStart < st.tokenEnd && currSt.tokenStart > st.tokenStart) { 
+                revert();
+            }
+
+            if(currSt.tokenStart == st.tokenStart && currSt.tokenEnd == st.tokenEnd) {
+                currSt.amount -= st.amount;
+                return;
+            }
+
+            if(currSt.tokenStart == st.tokenStart ) {
+                if(currSt.tokenEnd > st.tokenEnd) {
+                    uint256 currStAmount = currSt.amount;
+                    currSt.amount -= st.amount;
+                    uint256 currStTokenEnd = currSt.tokenEnd;
+                    currSt.tokenEnd = st.tokenEnd;
+                    uint256 index = _addSlice(addr, st.tokenEnd, currStTokenEnd, currStAmount,  currSt.next);
+                    currSt.next = index;
+                    break;
+                }
+                currSt.amount -= st.amount;
+                st.tokenStart = currSt.tokenEnd;
+                current = currSt.next;
+                continue;
+            }
+
+            if(currSt.tokenStart < st.tokenStart ) { 
+                uint256 index = _addSlice(addr, currSt.tokenStart, st.tokenStart, currSt.amount, current);
+                if(current == headerIndex[addr]) { 
+                    headerIndex[addr] = index; 
+                }else {
+                    uint256 _current = headerIndex[addr];
+                    while(_current > 0) {
+                        
+                        if(balances[addr][_current].next == current)  {
+                           
+                            balances[addr][_current].next = index;
+                            break;
+                        }
+                        _current = balances[addr][_current].next;
+                    }
+                }
+
+                uint256 currStAmunt = currSt.amount;
+                uint256 currStTokenEnd = currSt.tokenEnd;
+                currSt.amount -= st.amount;
+                currSt.tokenStart = st.tokenStart;
+
+                if(currStTokenEnd >= st.tokenEnd) {
+                    if(currStTokenEnd > st.tokenEnd) {
+                         uint256 index1 = _addSlice(addr, st.tokenEnd, currStTokenEnd, currStAmunt, currSt.next);
+                         currSt.next = index1;
+                    }
+                    break; 
+                }
+                st.tokenStart = currStTokenEnd;
+            }
+            current = currSt.next;
+        }while(current > 0);
     }
 
     function _isContract(address addr) internal view returns (bool) {
@@ -460,43 +502,68 @@ abstract contract BasicTimeSlicedToken is IFRC758 {
         return size > 0;
     }    
 
-    function checkAndCallSafeTransfer(address _from, address _to, uint256 amount, uint256 newTokenStart, uint256 newTokenEnd, bytes memory _data) internal returns (bool) {
+    function checkAndCallSafeTransfer(address _from, address _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd) internal returns (bool) {
         if (!_isContract(_to)) {
             return true;
         }
-        bytes4 retval = ITimeSlicedTokenReceiver(_to).onTimeSlicedTokenReceived(msg.sender, _from, amount, newTokenStart, newTokenEnd, _data);
+        bytes4 retval = ITimeSlicedTokenReceiver(_to).onTimeSlicedTokenReceived(msg.sender, _from, amount, tokenStart, tokenEnd);
         return (retval == _TIMESLICEDTOKEN_RECEIVED);
     }
 }
 
 
+contract ChaingeTestToken is FRC758, Controllable {
+   constructor(string memory name, string memory symbol, uint256 decimals ) FRC758(name, symbol, decimals){}
 
-contract FRC758 is BasicTimeSlicedToken, Controllable {
+    
+    uint256 private constant TotalLimit = 814670050000000000000000000;
+    function mint(address _receiver, uint256 amount, uint256 tokenStart, uint256 tokenEnd) external onlyController {
+        if (tokenEnd == MAX_TIME && (amount + _totalSupply) < TotalLimit) {
+            _totalSupply += amount;
+            _mint(_receiver, amount, tokenStart, tokenEnd);
+        }
+    }
 
-    address public rateToSetter;
-    uint256 internal interestRate;
+    function burn(address _owner, uint256 amount, uint256 tokenStart, uint256 tokenEnd) public onlyController {
+        _burn(_owner, amount, tokenStart, tokenEnd);
+    }
 
-    address internal cashbox;
-
-   constructor(string memory name , string memory symbol, uint256 decimals ) BasicTimeSlicedToken(name, symbol, decimals){}
-
-    // function mint(address _receiver, uint256 amount, uint256 tokenStart, uint256 tokenEnd) external onlyController {
-    //     _mint(_receiver, amount, tokenStart, tokenEnd);
+    // function balanceOf(address account) public view returns (uint256) {
+    //     return balanceOf(account, block.timestamp, MAX_TIME);
     // }
 
-    function mint(address _receiver, uint256 amount) external onlyController {
-        uint256 tokenStart = block.timestamp;
-        uint256 tokenEnd = MAX_TIME;
-        _mint(_receiver, amount, tokenStart, tokenEnd);
+    function transfer(address recipient, uint256 amount) public returns (bool) {
+        safeTransferFrom(msg.sender, recipient, amount, block.timestamp, MAX_TIME);
+        return true;
+    }
+
+    function allowance(address owner, address spender) public view returns (uint256) {
+        if(operatorApprovals[owner][spender]) {
+            return 1;
+        }
+        return 0;
+    }
+
+    function approve(address spender, uint256 amount) public returns (bool) {
+        bool _approved = false;
+        if(amount > 0) {
+            _approved = true;
+        }
+        setApprovalForAll(spender, _approved);
+        return true;
+    }
+
+    function transferFrom(address sender, address recipient, uint256 amount) public returns (bool) {
+        safeTransferFrom(sender, recipient, amount, block.timestamp, MAX_TIME);
+        return true;
     }
     
-    function onTimeSlicedTokenReceived(address _operator, address _from, uint256 amount, uint256 newTokenStart, uint256 newTokenEnd, bytes memory _data) public pure returns(bytes4) {
+    function onTimeSlicedTokenReceived(address _operator, address _from, uint256 amount, uint256 newTokenStart, uint256 newTokenEnd) public pure returns(bytes4) {
         _operator = address(0);
         _from = address(0);
         amount = 0;
         newTokenStart = 0;
         newTokenEnd = 0;
-        _data = new bytes(0);
-        return bytes4(keccak256("onTimeSlicedTokenReceived(address,address,uint256,uint256,uint256,bytes)"));
+        return bytes4(keccak256("onTimeSlicedTokenReceived(address,address,uint256,uint256,uint256)"));
     }
 }

@@ -3,7 +3,8 @@ pragma solidity =0.6.6;
 import './interfaces/IUniswapV2Router02.sol';
 
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol';
-import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
+// import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
+import './interfaces/IUniswapV2Pair.sol';
 // import '@uniswap/lib/contracts/libraries/TransferHelper.sol';
 import './TransferHelper.sol';
 
@@ -15,27 +16,28 @@ import '@uniswap/v2-periphery/contracts/interfaces/IWETH.sol';
 
 import "@nomiclabs/buidler/console.sol";
 
-// interface IFRC758 {
-//     event Transfer(address indexed _from, address indexed _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd, uint256 newTokenStart, uint256 newTokenEnd);
-//     event ApprovalForAll(address indexed _owner, address indexed _operator, bool _approved);
+interface IFRC758 {
+    event Transfer(address indexed _from, address indexed _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd, uint256 newTokenStart, uint256 newTokenEnd);
+    event ApprovalForAll(address indexed _owner, address indexed _operator, bool _approved);
 
-//     function balanceOf(address _owner) external view returns (uint256[] memory _amount, uint256[] memory _tokenStart, uint256[] memory _tokenEnd);
-//     function balanceOf(address _owner, uint256 startTime, uint256 endTime, bool strict)  external view returns (uint256);
+    // function balanceOf(address _owner) external view returns (uint256[] memory _amount, uint256[] memory _tokenStart, uint256[] memory _tokenEnd);
+    function balanceOf(address _owner, uint256 startTime, uint256 endTime)  external view returns (uint256);
+    // function balanceOfFor(address _owner) external view returns (uint256);
 
-//     function setApprovalForAll(address _operator, bool _approved) external;
-//     function isApprovedForAll(address _owner, address _operator) external view returns (bool);
+    function setApprovalForAll(address _operator, bool _approved) external;
+    function isApprovedForAll(address _owner, address _operator) external view returns (bool);
 
-//     function transferFrom(address _from, address _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd, uint256 newTokenStart, uint256 newTokenEnd) external;
-//     function safeTransferFrom(address _from, address _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd, uint256 newTokenStart, uint256 newTokenEnd) external;
-//     function safeTransferFrom(address _from, address _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd, uint256 newTokenStart, uint256 newTokenEnd, bytes calldata _data) external;
+    function transferFrom(address _from, address _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd, uint256 newTokenStart, uint256 newTokenEnd) external;
+    function safeTransferFrom(address _from, address _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd, uint256 newTokenStart, uint256 newTokenEnd) external;
+    function safeTransferFrom(address _from, address _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd, uint256 newTokenStart, uint256 newTokenEnd, bytes calldata _data) external;
 
-//     function totalSupply() external view returns (uint256);
-//     function name() external view returns (string memory);
-//     function symbol() external view returns (string memory);
-//     function decimals() external view returns (uint256);
+    function totalSupply() external view returns (uint256);
+    function name() external view returns (string memory);
+    function symbol() external view returns (string memory);
+    function decimals() external view returns (uint256);
 
-//    //   function onTimeSlicedTokenReceived(address _operator, address _from, uint256 amount, uint256 newTokenStart, uint256 newTokenEnd, bytes calldata _data) external returns(bytes4);
-// }
+   //   function onTimeSlicedTokenReceived(address _operator, address _from, uint256 amount, uint256 newTokenStart, uint256 newTokenEnd, bytes calldata _data) external returns(bytes4);
+}
 
 
 library UniswapV2Library {
@@ -191,7 +193,7 @@ contract ChaingeSwap is IUniswapV2Router02 {
         );
     }
 
-    function _addLiquidityByTimeSliceToken(         
+    function _addLiquidityByTimeSliceToken(
             address tokenA,
             address tokenB,
             uint amountA,
@@ -201,12 +203,16 @@ contract ChaingeSwap is IUniswapV2Router02 {
     ) internal returns(uint liquidity) {
         address pair = IUniswapV2Factory(factory).getPair(tokenA, tokenB);
         // console.log(amountA, amountB, pair);
+
         TransferHelper.safeTransferFrom(tokenA, msg.sender, pair, amountA, time[0], time[1]);
         TransferHelper.safeTransferFrom(tokenB, msg.sender, pair, amountB, time[2], time[3]);
-        
-        // uint256 balance0 = IFRC758(tokenA).balanceOf(msg.sender, 1617185708, 1618185708, false);
-        // console.log(msg.sender, balance0);
-        liquidity = IUniswapV2Pair(pair).mint(to);
+        // uint256 balance = IFRC758(tokenA).balanceOf(msg.sender, 1617412453, 666666666666);
+        // console.log('aft', balance);
+        // uint256 balance1 = IFRC758(tokenA).balanceOf(msg.sender, 1617412453, 666666666666);
+        // console.log('aft',msg.sender, balance1, amountA);
+
+        // uint256 balanceP = IFRC758(tokenA).balanceOf(pair, 1617412453, 666666666666, false);
+        liquidity = IUniswapV2Pair(pair).mint(to, time);
     }
 
 
@@ -230,7 +236,8 @@ contract ChaingeSwap is IUniswapV2Router02 {
         // TransferHelper.safeTransferFrom(token, msg.sender, pair, amountToken);
         IWETH(WETH).deposit{value: amountETH}();
         assert(IWETH(WETH).transfer(pair, amountETH));
-        liquidity = IUniswapV2Pair(pair).mint(to);
+        // liquidity = IUniswapV2Pair(pair).mint(to);
+        liquidity = 0; // 临时 
         // refund dust eth, if any
         if (msg.value > amountETH) TransferHelper.safeTransferETH(msg.sender, msg.value - amountETH);
     }
@@ -377,15 +384,18 @@ contract ChaingeSwap is IUniswapV2Router02 {
         uint amountInMax,
         address[] calldata path,
         address to,
-        uint deadline
+        uint deadline,
+        uint256[] calldata time
     ) external virtual override ensure(deadline) returns (uint[] memory amounts) {
         amounts = UniswapV2Library.getAmountsIn(factory, amountOut, path);
+        console.log(amounts[0], amountInMax);
         require(amounts[0] <= amountInMax, 'UniswapV2Router: EXCESSIVE_INPUT_AMOUNT');
-        // TransferHelper.safeTransferFrom(
-        //     path[0], msg.sender, UniswapV2Library.pairFor(factory, path[0], path[1]), amounts[0]
-        // );
+        TransferHelper.safeTransferFrom(
+            path[0], msg.sender, UniswapV2Library.pairFor(factory, path[0], path[1]), amounts[0], time[0], time[1]
+        );
         _swap(amounts, path, to);
     }
+
     function swapExactETHForTokens(uint amountOutMin, address[] calldata path, address to, uint deadline)
         external
         virtual
@@ -496,10 +506,11 @@ contract ChaingeSwap is IUniswapV2Router02 {
         // );
     
         uint balanceBefore = IERC20(path[path.length - 1]).balanceOf(to);
-        _swapSupportingFeeOnTransferTokens(path, to);
+      
+        // _swapSupportingFeeOnTransferTokens(path, to);
 
         {
-        //  console.log('success');
+        // console.log('success');
         // console.log('amountOutMin',amountOutMin );
         // console.log(IERC20(path[path.length - 1]).balanceOf(to).sub(balanceBefore));
         require(

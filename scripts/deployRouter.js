@@ -17,7 +17,7 @@ async function main() {
 
  const [owner] = await hre.ethers.getSigners();
  signers.address = owner.address
-  console.log('owner:', owner.address)
+ console.log('owner:', owner.address)
   // We get the contract to deploy
 
   // const UniswapV2Router02 = await hre.ethers.getContractFactory("UniswapV2Router02");
@@ -27,7 +27,6 @@ async function main() {
   // console.log("Greeter deployed to:", uniswapV2Router02.address);
 
   // const {toeknA, toeknB} = await depErc20()
-
 
   const {tokenA, tokenB} = await frc758()
 
@@ -44,10 +43,17 @@ async function main() {
   await sleep()
   await addLiquidity(uniRouter, tokenA.address, tokenB.address)
 
-  // await sleep()
-  // await swap(uniRouter, tokenA.address, tokenB.address)
+  // console.log('pair',pair);
+  const bal = await tokenA.balanceOf(signers.address, 1617412453, 666666666666); // startTime 必须大于当前时间
+  console.log(' addLiquidity 之后 tokenA balance', parseInt(bal._hex));
+  
+  const bal2 = await tokenB.balanceOf(signers.address, 1617412453, 666666666666); // startTime 必须大于当前时间
+  console.log(' addLiquidity 之后  tokenB balance', parseInt(bal2._hex));
 
-  // await checkBalance(tokenA, tokenB)
+  await sleep()
+  await swap(uniRouter, tokenA.address, tokenB.address)
+
+  await checkBalance(tokenA, tokenB)
 }
 
 // We recommend this pattern to be able to use async/await everywhere
@@ -89,26 +95,31 @@ async function depErc20() {
 }
 
 async function frc758() {
-  const FRC758 = await hre.ethers.getContractFactory("FRC758");
+  const FRC758 = await hre.ethers.getContractFactory("ChaingeTestToken");
   const tokenA = await FRC758.deploy("TokenA", "F1", 18);
   await tokenA.deployed();
   await sleep()
 
-  // console.log( await tokenA.name())
+  console.log( await tokenA.name())
   // console.log( tokenA.balanceOf)
 
   console.log('tokenA address', tokenA.address);
-  await tokenA.mint(signers.address , 18000000000)
-  const bal = await tokenA.balanceOf(signers.address, 1617412453, 666666666666, false); // startTime 必须大于当前时间
-  console.log(bal)
 
+  await tokenA.mint(signers.address , "1000000000000000000", 1619395996, 666666666666)
+
+  const bal = await tokenA.balanceOf(signers.address, 1619395996, 666666666666); // startTime 必须大于当前时间
+
+  console.log('tokenA balance:', parseInt(bal._hex))
+  // console.log(msg.sender, balance0, tokenA);
   await sleep()
   const tokenB = await FRC758.deploy("TokenB", "F2", 18);
   await tokenB.deployed();
   await sleep()
 
-  await tokenB.mint(signers.address, 18000000000)
+  await tokenB.mint(signers.address, "4500000000000000000", 1619395996, 666666666666)
   console.log('toeknB address', tokenB.address)
+  const bal2 = await tokenB.balanceOf(signers.address, 1619395996, 666666666666); // startTime 必须大于当前时间
+  console.log('tokenB balance:', parseInt(bal2._hex))
 
   return {
     tokenA,
@@ -130,7 +141,7 @@ async function factory() {
 
 async function createPair(factory, tokenA, tokenB) {
   console.log('start createPair')
-  const pair = await factory.createPair(tokenA.address, tokenB.address, [ 1617212453,666666666666, 1627212453,666666666666]); // 创建个1617212453 到永远的和 1627212453 到永远的。
+  const pair = await factory.createPair(tokenA.address, tokenB.address, [ 1619395996,666666666666, 1619395996,666666666666]); // 创建个1617212453 到永远的和 1627212453 到永远的。
   console.log('end createPair')
   return pair
 }
@@ -159,35 +170,35 @@ async function approve(routerAddress, tokenA, tokenB) {
 
 async function addLiquidity(uniRouter, addressA, addressB) {
   console.log("开始调用 addLiquidity");
-  console.log(await uniRouter.addLiquidity(
+  await uniRouter.addLiquidity(
     addressA,
     addressB,
-    11100000,
-    1000100,
-    11100000,
-    1000100,
-    '0x76Ee3eEb7F5B708791a805cCa590aead4777D378',
+    "100000000000000000",
+    "4500000000000000000",
+    "9000000000000000",
+    "400000000000000",
+    signers.address,
     9999999999999,
-    [1617212453,666666666666,1627212453,666666666666]
-  ))
+    [1619395996,666666666666,1619395996,666666666666]
+  )
   console.log('addLiquidity 完成');
 }
 
 async function swap(uniRouter, addressA, addressB) {
-  const swapResult = await uniRouter.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-    8000000,
-    7,
+  const swapResult = await uniRouter.swapTokensForExactTokens(
+    "900000000000000000",
+    "900000000000000000",
     [addressA, addressB],
-    '0x76Ee3eEb7F5B708791a805cCa590aead4777D378',
-    99999999999999,
+    signers.address,
+    999999999999,
+    [1619395996, 666666666666]
   )
-    console.log(swapResult)
     console.log('完成了swap');
 }
 
 async function checkBalance(tokenA, tokenB) {
-  const balanceA = await tokenA.balanceOf('0x76Ee3eEb7F5B708791a805cCa590aead4777D378')
-  const balanceB = await tokenB.balanceOf('0x76Ee3eEb7F5B708791a805cCa590aead4777D378')
+  const balanceA = await tokenA.balanceOf(signers.address, 1619395996, 666666666666)
+  const balanceB = await tokenB.balanceOf(signers.address, 1619395996, 666666666666)
 
-  console.log(parseInt(balanceA._hex), parseInt(balanceB._hex));
+  console.log('swap之后A 和 B ',parseInt(balanceA._hex), parseInt(balanceB._hex));
 }
