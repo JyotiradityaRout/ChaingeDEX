@@ -44,10 +44,10 @@ async function main() {
   await addLiquidity(uniRouter, tokenA.address, tokenB.address)
 
   // console.log('pair',pair);
-  const bal = await tokenA.balanceOf(signers.address, 1617412453, 666666666666); // startTime 必须大于当前时间
+  const bal = await tokenA.timeBalanceOf(signers.address, 1617412453, 666666666666); // startTime 必须大于当前时间
   console.log(' addLiquidity 之后 tokenA balance', parseInt(bal._hex));
   
-  const bal2 = await tokenB.balanceOf(signers.address, 1617412453, 666666666666); // startTime 必须大于当前时间
+  const bal2 = await tokenB.timeBalanceOf(signers.address, 1617412453, 666666666666); // startTime 必须大于当前时间
   console.log(' addLiquidity 之后  tokenB balance', parseInt(bal2._hex));
 
   await sleep()
@@ -105,9 +105,9 @@ async function frc758() {
 
   console.log('tokenA address', tokenA.address);
 
-  await tokenA.mint(signers.address , "1000000000000000000", 1619395996, 666666666666)
+  await tokenA.mint(signers.address , "1000000000000000000")
 
-  const bal = await tokenA.balanceOf(signers.address, 1619395996, 666666666666); // startTime 必须大于当前时间
+  const bal = await tokenA.balanceOf(signers.address); // startTime 必须大于当前时间
 
   console.log('tokenA balance:', parseInt(bal._hex))
   // console.log(msg.sender, balance0, tokenA);
@@ -116,9 +116,9 @@ async function frc758() {
   await tokenB.deployed();
   await sleep()
 
-  await tokenB.mint(signers.address, "4500000000000000000", 1619395996, 666666666666)
+  await tokenB.mint(signers.address, "4500000000000000000")
   console.log('toeknB address', tokenB.address)
-  const bal2 = await tokenB.balanceOf(signers.address, 1619395996, 666666666666); // startTime 必须大于当前时间
+  const bal2 = await tokenB.balanceOf(signers.address); // startTime 必须大于当前时间
   console.log('tokenB balance:', parseInt(bal2._hex))
 
   return {
@@ -197,8 +197,8 @@ async function swap(uniRouter, addressA, addressB) {
 }
 
 async function checkBalance(tokenA, tokenB) {
-  const balanceA = await tokenA.balanceOf(signers.address, 1619395996, 666666666666)
-  const balanceB = await tokenB.balanceOf(signers.address, 1619395996, 666666666666)
+  const balanceA = await tokenA.timeBalanceOf(signers.address, 1619395996, 666666666666)
+  const balanceB = await tokenB.timeBalanceOf(signers.address, 1619395996, 666666666666)
 
   console.log('swap之后A 和 B ',parseInt(balanceA._hex), parseInt(balanceB._hex));
 }

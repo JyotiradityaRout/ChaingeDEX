@@ -7,8 +7,7 @@ interface IFRC758 {
     event ApprovalForAll(address indexed _owner, address indexed _operator, bool _approved);
 
     // function balanceOf(address _owner) external view returns (uint256[] memory _amount, uint256[] memory _tokenStart, uint256[] memory _tokenEnd);
-    function balanceOf(address _owner, uint256 startTime, uint256 endTime)  external view returns (uint256);
-    function balanceOfFor(address _owner) external view returns (uint256);
+    function timeBalanceOf(address _owner, uint256 startTime, uint256 endTime)  external view returns (uint256);
     
     function setApprovalForAll(address _operator, bool _approved) external;
     function isApprovedForAll(address _owner, address _operator) external view returns (bool);

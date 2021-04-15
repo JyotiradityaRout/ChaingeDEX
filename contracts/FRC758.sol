@@ -98,7 +98,7 @@ interface IFRC758 {
     function decimals() external view returns (uint256);
     function totalSupply() external view returns (uint256);
     function sliceOf(address _owner) external view returns (uint256[] memory, uint256[] memory, uint256[] memory);
-    function balanceOf(address _owner, uint256 tokenStart, uint256 tokenEnd) external view returns (uint256);
+    function timeBalanceOf(address _owner, uint256 tokenStart, uint256 tokenEnd) external view returns (uint256);
     function setApprovalForAll(address _operator, bool _approved) external;
     function isApprovedForAll(address _owner, address _operator) external view returns (bool);
     function transferFrom(address _from, address _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd) external;
@@ -208,7 +208,7 @@ abstract contract FRC758 is IFRC758 {
         return (amountArray, tokenStartArray, tokenEndArray);
     }
 
-    function balanceOf(address from, uint256 tokenStart, uint256 tokenEnd) public override view returns(uint256) {
+    function timeBalanceOf(address from, uint256 tokenStart, uint256 tokenEnd) public override view returns(uint256) {
        if (tokenStart >= tokenEnd) {
            return 0;
        }
@@ -517,20 +517,18 @@ contract ChaingeTestToken is FRC758, Controllable {
 
     
     uint256 private constant TotalLimit = 814670050000000000000000000;
-    function mint(address _receiver, uint256 amount, uint256 tokenStart, uint256 tokenEnd) external onlyController {
-        if (tokenEnd == MAX_TIME && (amount + _totalSupply) < TotalLimit) {
-            _totalSupply += amount;
-            _mint(_receiver, amount, tokenStart, tokenEnd);
-        }
+	function mint(address _receiver, uint256 amount) external onlyController {
+		require((amount + _totalSupply) <= TotalLimit, "can not mint more tokens");
+        _mint(_receiver, amount, block.timestamp, MAX_TIME);
+		_totalSupply += amount;
     }
-
     function burn(address _owner, uint256 amount, uint256 tokenStart, uint256 tokenEnd) public onlyController {
         _burn(_owner, amount, tokenStart, tokenEnd);
     }
 
-    // function balanceOf(address account) public view returns (uint256) {
-    //     return balanceOf(account, block.timestamp, MAX_TIME);
-    // }
+    function balanceOf(address account) public view returns (uint256) {
+        return timeBalanceOf(account, block.timestamp, MAX_TIME);
+    }
 
     function transfer(address recipient, uint256 amount) public returns (bool) {
         safeTransferFrom(msg.sender, recipient, amount, block.timestamp, MAX_TIME);
@@ -567,3 +565,4 @@ contract ChaingeTestToken is FRC758, Controllable {
         return bytes4(keccak256("onTimeSlicedTokenReceived(address,address,uint256,uint256,uint256)"));
     }
 }
+

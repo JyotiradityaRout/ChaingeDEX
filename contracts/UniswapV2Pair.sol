@@ -121,12 +121,10 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     // this low-level function should be called from a contract which performs important safety checks
     function mint(address to, uint256[] calldata time) external lock returns (uint liquidity) {
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
-        uint256 balance0 = IFRC758(token0._address).balanceOf(address(this), time[0], time[1]);
-        uint256 balance1 = IFRC758(token1._address).balanceOf(address(this), time[2], time[3]);
+        uint256 balance0 = IFRC758(token0._address).timeBalanceOf(address(this), time[0], time[1]);
+        uint256 balance1 = IFRC758(token1._address).timeBalanceOf(address(this), time[2], time[3]);
         // // uint256 balance0 = IERC20(token0).balanceOf(address(this));
         // // uint256 balance1 = IERC20(token1).balanceOf(address(this));
-        // uint256 balance2 = IFRC758(token1._address).balanceOf(msg.sender, 1617412453, 666666666666, false);
-        // console.log('mint', balance0, balance1, address(this));
         uint amount0 = balance0.sub(_reserve0);
         uint amount1 = balance1.sub(_reserve1);
 
