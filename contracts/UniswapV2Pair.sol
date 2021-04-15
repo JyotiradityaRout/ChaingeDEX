@@ -10,15 +10,17 @@ import './interfaces/IUniswapV2Factory.sol';
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Callee.sol';
 
 import './interfaces/IFRC758.sol';
-
+import './UniswapV2FRC758.sol';
 import "@nomiclabs/buidler/console.sol";
 
-contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
+contract UniswapV2Pair is IUniswapV2Pair, UniswapV2FRC758 {
     using SafeMath  for uint;
     using UQ112x112 for uint224;
 
     uint public constant MINIMUM_LIQUIDITY = 10**3;
-    bytes4 private constant SELECTOR = bytes4(keccak256(bytes('transfer(address,uint256)')));
+
+    // safeTransferFrom(address _from, address _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd) 
+    bytes4 private constant SELECTOR = bytes4(keccak256(bytes('safeTransferFrom(address,address,uint256,uint256,uint256)')));
 
     address public factory;
     uint112 private reserve0;           // uses single storage slot, accessible via getReserves
@@ -43,8 +45,10 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
         _blockTimestampLast = blockTimestampLast;
     }
 
-    function _safeTransfer(address token, address to, uint value) private {
-        (bool success, bytes memory data) = token.call(abi.encodeWithSelector(SELECTOR, to, value));
+    function _safeTransfer(address token, address to, uint value, uint256 tokenStart, uint256 tokenEnd) private {
+        console.log('this????', token, value);
+        (bool success, bytes memory data) = token.call(abi.encodeWithSelector(SELECTOR, address(this), to, value, tokenStart, tokenEnd));
+        console.log(success);
         require(success && (data.length == 0 || abi.decode(data, (bool))), 'UniswapV2: TRANSFER_FAILED');
     }
 
@@ -65,20 +69,20 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     }
 
 
-    struct SlicedToken {
+    struct SliceAccount {
         address _address; //token amount
         uint256 tokenStart; //token start blockNumber or timestamp (in secs from unix epoch)
         uint256 tokenEnd; //token end blockNumber or timestamp, use MAX_UINT for timestamp, MAX_BLOCKNUMBER for blockNumber.
     }
 
-    SlicedToken public token0;
-    SlicedToken public token1;
+    SliceAccount public token0;
+    SliceAccount public token1;
 
     // called once by the factory at time of deployment
     function initialize(address _token0, address _token1, uint256[] calldata time) external {
         require(msg.sender == factory, 'UniswapV2: FORBIDDEN'); // sufficient check
-        token0 = SlicedToken(_token0, time[0], time[1]);
-        token1 = SlicedToken(_token1, time[2], time[3]);
+        token0 = SliceAccount(_token0, time[0], time[1]);
+        token1 = SliceAccount(_token1, time[2], time[3]);
     }
 
     // update reserves and, on the first call per block, price accumulators
@@ -171,38 +175,37 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
 
     // this low-level function should be called from a contract which performs important safety checks
     function swap(uint amount0Out, uint amount1Out, address to, bytes calldata data) external lock {
-        // require(amount0Out > 0 || amount1Out > 0, 'UniswapV2: INSUFFICIENT_OUTPUT_AMOUNT');
-        // (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
-        // require(amount0Out < _reserve0 && amount1Out < _reserve1, 'UniswapV2: INSUFFICIENT_LIQUIDITY');
+        require(amount0Out > 0 || amount1Out > 0, 'UniswapV2: INSUFFICIENT_OUTPUT_AMOUNT');
+        (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
+        require(amount0Out < _reserve0 && amount1Out < _reserve1, 'UniswapV2: INSUFFICIENT_LIQUIDITY');
 
-        // uint balance0;
-        // uint balance1;
-        // { // scope for _token{0,1}, avoids stack too deep errors
-        // address _token0 = token0;
-        // address _token1 = token1;
-        // require(to != _token0 && to != _token1, 'UniswapV2: INVALID_TO');
-        // if (amount0Out > 0) _safeTransfer(_token0, to, amount0Out); // optimistically transfer tokens
-        // if (amount1Out > 0) _safeTransfer(_token1, to, amount1Out); // optimistically transfer tokens
-        // if (data.length > 0) IUniswapV2Callee(to).uniswapV2Call(msg.sender, amount0Out, amount1Out, data);
+        uint balance0;
+        uint balance1;
+        { // scope for _token{0,1}, avoids stack too deep errors
+        address _token0 = token0._address;
+        address _token1 = token1._address;
+        require(to != _token0 && to != _token1, 'UniswapV2: INVALID_TO');
+        if (amount0Out > 0) _safeTransfer(_token0, to, amount0Out, token0.tokenStart, token0.tokenEnd); // optimistically transfer tokens
+        if (amount1Out > 0) _safeTransfer(_token1, to, amount1Out, token1.tokenStart, token1.tokenEnd); // optimistically transfer tokens
+        if (data.length > 0) IUniswapV2Callee(to).uniswapV2Call(msg.sender, amount0Out, amount1Out, data);
 
-        // balance0 = IERC20(_token0).balanceOf(address(this));
-        // balance1 = IERC20(_token1).balanceOf(address(this));
+        balance0 = IFRC758(_token0).timeBalanceOf(address(this), token0.tokenStart, token0.tokenEnd);
+        balance1 = IFRC758(_token1).timeBalanceOf(address(this), token1.tokenStart, token1.tokenEnd);
 
-        // }
+        }
 
-        // uint amount0In = balance0 > _reserve0 - amount0Out ? balance0 - (_reserve0 - amount0Out) : 0;
-        // uint amount1In = balance1 > _reserve1 - amount1Out ? balance1 - (_reserve1 - amount1Out) : 0;
-        // require(amount0In > 0 || amount1In > 0, 'UniswapV2: INSUFFICIENT_INPUT_AMOUNT');
-        // { // scope for reserve{0,1}Adjusted, avoids stack too deep errors
+        uint amount0In = balance0 > _reserve0 - amount0Out ? balance0 - (_reserve0 - amount0Out) : 0;
+        uint amount1In = balance1 > _reserve1 - amount1Out ? balance1 - (_reserve1 - amount1Out) : 0;
+        require(amount0In > 0 || amount1In > 0, 'UniswapV2: INSUFFICIENT_INPUT_AMOUNT');
+        { // scope for reserve{0,1}Adjusted, avoids stack too deep errors
 
+        uint balance0Adjusted = balance0.mul(1000).sub(amount0In.mul(3));
+        uint balance1Adjusted = balance1.mul(1000).sub(amount1In.mul(3));
+        require(balance0Adjusted.mul(balance1Adjusted) >= uint(_reserve0).mul(_reserve1).mul(1000**2), 'UniswapV2: K');
+        }
 
-        // uint balance0Adjusted = balance0.mul(1000).sub(amount0In.mul(3));
-        // uint balance1Adjusted = balance1.mul(1000).sub(amount1In.mul(3));
-        // require(balance0Adjusted.mul(balance1Adjusted) >= uint(_reserve0).mul(_reserve1).mul(1000**2), 'UniswapV2: K');
-        // }
-
-        // _update(balance0, balance1, _reserve0, _reserve1);
-        // emit Swap(msg.sender, amount0In, amount1In, amount0Out, amount1Out, to);
+        _update(balance0, balance1, _reserve0, _reserve1);
+        emit Swap(msg.sender, amount0In, amount1In, amount0Out, amount1Out, to);
     }
 
     // force balances to match reserves

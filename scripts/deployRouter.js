@@ -44,10 +44,10 @@ async function main() {
   await addLiquidity(uniRouter, tokenA.address, tokenB.address)
 
   // console.log('pair',pair);
-  const bal = await tokenA.timeBalanceOf(signers.address, 1617412453, 666666666666); // startTime 必须大于当前时间
+  const bal = await tokenA.timeBalanceOf(signers.address, 1619395996, 666666666666); // startTime 必须大于当前时间
   console.log(' addLiquidity 之后 tokenA balance', parseInt(bal._hex));
   
-  const bal2 = await tokenB.timeBalanceOf(signers.address, 1617412453, 666666666666); // startTime 必须大于当前时间
+  const bal2 = await tokenB.timeBalanceOf(signers.address, 1619395996, 666666666666); // startTime 必须大于当前时间
   console.log(' addLiquidity 之后  tokenB balance', parseInt(bal2._hex));
 
   await sleep()
@@ -173,10 +173,10 @@ async function addLiquidity(uniRouter, addressA, addressB) {
   await uniRouter.addLiquidity(
     addressA,
     addressB,
-    "100000000000000000",
-    "4500000000000000000",
-    "9000000000000000",
-    "400000000000000",
+    "1000000000000",
+    "4000000000000",
+    "90000000000",
+    "40000000000",
     signers.address,
     9999999999999,
     [1619395996,666666666666,1619395996,666666666666]
@@ -186,8 +186,8 @@ async function addLiquidity(uniRouter, addressA, addressB) {
 
 async function swap(uniRouter, addressA, addressB) {
   const swapResult = await uniRouter.swapTokensForExactTokens(
-    "900000000000000000",
-    "900000000000000000",
+    "1000000000000",
+    "400000000000",
     [addressA, addressB],
     signers.address,
     999999999999,
