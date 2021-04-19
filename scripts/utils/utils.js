@@ -31,12 +31,13 @@ module.exports.mint = async (forLiquidity, forSwap, utils, params) => {
 
     console.log('-------------- addLiquidity --------------')
     await sleep()
+
     await utils.addLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, config)
 
-    const bal = await tokenA.balanceOf(forLiquidity.address, startTime, endTime); // startTime 必须大于当前时间
+    const bal = await tokenA.balanceOf(forLiquidity.address); // startTime 必须大于当前时间
     console.log('tokenA balance', parseInt(bal._hex), parseInt(bal._hex).length);
 
-    const bal2 = await tokenB.balanceOf(forLiquidity.address, startTime, endTime); // startTime 必须大于当前时间
+    const bal2 = await tokenB.balanceOf(forLiquidity.address); // startTime 必须大于当前时间
     console.log('tokenB balance', parseInt(bal2._hex), parseInt(bal2._hex).length);
     console.log('-------------- addLiquidity --------------')
 
@@ -57,10 +58,10 @@ module.exports.frc758 = async (_s, config) => {
     await tokenA.deployed();
 
     await sleep()
-    await tokenA.mint(signers.address, config.amountA, config.startTime, config.endTime)
-    await tokenA.mint(forSwap.address, config.amountA, config.startTime, config.endTime)
+    await tokenA.mint(signers.address, config.amountA)
+    await tokenA.mint(forSwap.address, config.amountA)
     console.log('toeknA address:', tokenA.address)
-    const bal = await tokenA.balanceOf(signers.address, config.startTime, config.endTime); // startTime 必须大于当前时间
+    const bal = await tokenA.balanceOf(signers.address); // startTime 必须大于当前时间
     console.log('tokenA balance:', parseInt(bal._hex))
 
     await sleep()
@@ -68,10 +69,10 @@ module.exports.frc758 = async (_s, config) => {
     const tokenB = await FRC758.deploy("TokenB", "F2", 18);
     await tokenB.deployed();
     await sleep()
-    await tokenB.mint(signers.address, config.amountB, config.startTime, config.endTime)
+    await tokenB.mint(signers.address, config.amountB)
     // await tokenB.mint(forSwap.address, config.amountB, config.startTime, config.endTime)
     console.log('toeknB address:', tokenB.address)
-    const bal2 = await tokenB.balanceOf(signers.address, config.startTime, config.endTime); // startTime 必须大于当前时间
+    const bal2 = await tokenB.balanceOf(signers.address); // startTime 必须大于当前时间
     console.log('tokenB balance:', parseInt(bal2._hex))
 
     return {
@@ -169,8 +170,8 @@ module.exports.swap = async (signers, uniRouter, addressA, addressB, config) => 
 }
 
 module.exports.checkBalance = async function checkBalance(timer = config.checkTImer, signers, tokenA, tokenB) {
-    const balanceA = await tokenA.balanceOf(signers.address, timer[0], timer[1])
-    const balanceB = await tokenB.balanceOf(signers.address, timer[0], timer[1])
+    const balanceA = await tokenA.balanceOf(signers.address)
+    const balanceB = await tokenB.balanceOf(signers.address)
 
     console.log('swap之后A 和 B ', parseInt(balanceA._hex), parseInt(balanceA._hex).length, parseInt(balanceB._hex), parseInt(balanceB._hex).length);
     return [parseInt(balanceA._hex), parseInt(balanceB._hex)].toString()
@@ -181,6 +182,6 @@ module.exports.addZero = (_p, _l)=>{
 }
 
 module.exports._checkBalance = async (timer = config.checkTImer, signers, token)=>{
-    const balance = await token.balanceOf(signers.address, timer[0], timer[1])
+    const balance = await token.balanceOf(signers.address)
     return parseInt(balance._hex)
 }

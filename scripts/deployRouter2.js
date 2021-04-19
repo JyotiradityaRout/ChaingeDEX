@@ -12,14 +12,14 @@ async function main() {
         {
             startTime: 0,
             endTime: 666666666666,
-            amountA: utils.addZero(100000, 15),
-            amountB: utils.addZero(100001, 15),
-            amountADesired: utils.addZero(10, 15),
-            amountBDesired: utils.addZero(100, 15),
-            amountAMin: utils.addZero(9, 15),
-            amountBMin: utils.addZero(4, 15),
-            amountOut: utils.addZero(10, 15),
-            amountInMax: utils.addZero(90, 15)
+            amountA: utils.addZero(1, 18),
+            amountB: utils.addZero(45, 17),
+            amountADesired: utils.addZero(1, 12),
+            amountBDesired: utils.addZero(4, 12),
+            amountAMin: utils.addZero(9, 10),
+            amountBMin: utils.addZero(4, 10),
+            amountOut: utils.addZero(10, 12),
+            amountInMax: utils.addZero(90, 12)
         }
     )
     const balanceA = await utils._checkBalance([0, 666666666666], forSwap, tokenA)
