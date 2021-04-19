@@ -1,4 +1,4 @@
-const config = require("../config");
+const config = require("../config"); 
 const hre = require("hardhat");
 
 async function sleep() {
@@ -22,7 +22,7 @@ module.exports.mint = async (forLiquidity, forSwap, utils, params) => {
     await sleep()
     const { uniswapV2Factory } = await utils.factory(forLiquidity)
 
-    const pair = await utils.createPair(uniswapV2Factory, tokenA, tokenB, config)
+    const pair = await utils.createPair(uniswapV2Factory, tokenA, tokenB, params)
     await sleep()
     const uniRouter = await utils.router(uniswapV2Factory.address, tokenA.address)
 
@@ -32,7 +32,7 @@ module.exports.mint = async (forLiquidity, forSwap, utils, params) => {
     console.log('-------------- addLiquidity --------------')
     await sleep()
 
-    await utils.addLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, config)
+    await utils.addLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, params)
 
     const bal = await tokenA.balanceOf(forLiquidity.address); // startTime 必须大于当前时间
     console.log('tokenA balance', parseInt(bal._hex), parseInt(bal._hex).length);
@@ -43,7 +43,7 @@ module.exports.mint = async (forLiquidity, forSwap, utils, params) => {
 
     console.log('-------------- swap --------------')
     await sleep()
-    await utils.swap(forSwap, uniRouter, tokenA.address, tokenB.address, config)
+    await utils.swap(forSwap, uniRouter, tokenA.address, tokenB.address, params)
     return { tokenA, tokenB }
 }
 
@@ -153,7 +153,7 @@ module.exports.addLiquidity = async (signers, uniRouter, addressA, addressB, con
         config.amountBMin,
         signers.address,
         9999999999999,
-        [config.startTime + 100, config.endTime, config.startTime + 100, config.endTime]
+        [config.startTime, config.endTime, config.startTime, config.endTime]
     )
     console.log(`amountADesired / amountBDesired: ${config.amountADesired / config.amountBDesired}, \n amountBDesired / amountADesired: ${config.amountBDesired / config.amountADesired}, `)
 }
