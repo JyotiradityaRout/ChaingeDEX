@@ -14,6 +14,7 @@ interface IUniswapV2Pair {
     function approve(address spender, uint value) external returns (bool);
     function transfer(address to, uint value) external returns (bool);
     function transferFrom(address from, address to, uint value) external returns (bool);
+    function safeTransferFrom(address _from, address _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd) external;
 
     function DOMAIN_SEPARATOR() external view returns (bytes32);
     function PERMIT_TYPEHASH() external pure returns (bytes32);
@@ -43,7 +44,7 @@ interface IUniswapV2Pair {
     function kLast() external view returns (uint);
 
     function mint(address to, uint256[] calldata time) external returns (uint liquidity);
-    function burn(address to) external returns (uint amount0, uint amount1);
+    function burn(address to, uint256[] calldata time) external returns (uint amount0, uint amount1);
     function swap(uint amount0Out, uint amount1Out, address to, bytes calldata data) external;
     function skim(address to) external;
     function sync() external;

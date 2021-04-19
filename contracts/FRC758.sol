@@ -262,7 +262,7 @@ abstract contract FRC758 is IFRC758 {
         _validateAmount(amount);
         _checkRights(isApprovedOrOwner(msg.sender, _from));
         require(_from != _to, "no sending to yourself");
-        console.log('amount', amount);
+        console.log('amount', amount, tokenStart);
         SlicedToken memory st = SlicedToken({amount: amount, tokenStart: tokenStart, tokenEnd: tokenEnd, next: 0});
         _subSliceFromBalance(_from, st);
                 console.log('_subSliceFromBalance success');
@@ -422,7 +422,7 @@ abstract contract FRC758 is IFRC758 {
         uint256 current = headerIndex[addr];
         do {
             SlicedToken storage currSt = balances[addr][current]; 
-
+            console.log(currSt.tokenStart);
             if(currSt.tokenEnd < block.timestamp) { 
                 headerIndex[addr] = currSt.next; 
                 current = currSt.next;
@@ -521,6 +521,7 @@ contract ChaingeTestToken is FRC758, Controllable {
     uint256 private constant TotalLimit = 814670050000000000000000000;
 	function mint(address _receiver, uint256 amount) external onlyController {
 		require((amount + _totalSupply) <= TotalLimit, "can not mint more tokens");
+        console.log('mintStartTime', block.timestamp);
         _mint(_receiver, amount, block.timestamp, MAX_TIME);
 		_totalSupply += amount;
     }

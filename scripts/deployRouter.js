@@ -7,6 +7,12 @@ const hre = require("hardhat");
 
 const signers = {}
 
+
+function getNow() {
+  return parseInt(Date.now() / 1000)
+}
+
+
 async function main() {
   // Hardhat always runs the compile task when running scripts with its command
   // line interface.
@@ -17,7 +23,7 @@ async function main() {
 
  const [owner] = await hre.ethers.getSigners();
  signers.address = owner.address
- console.log('owner:', owner.address)
+//  console.log('owner:', owner.address)
   // We get the contract to deploy
 
   // const UniswapV2Router02 = await hre.ethers.getContractFactory("UniswapV2Router02");
@@ -41,18 +47,24 @@ async function main() {
   await approve(uniRouter.address, tokenA, tokenB)
 
   await sleep()
-  await addLiquidity(uniRouter, tokenA.address, tokenB.address)
-
+  const res = await addLiquidity(uniRouter, tokenA.address, tokenB.address)
+  // console.log(res);
   // console.log('pair',pair);
-  const bal = await tokenA.timeBalanceOf(signers.address, 1619395996, 666666666666); // startTime 必须大于当前时间
+
+  const now = getNow() + 10;
+
+  const bal = await tokenA.timeBalanceOf(signers.address, now, 666666666666); // startTime 必须大于当前时间
   console.log(' addLiquidity 之后 tokenA balance', parseInt(bal._hex));
   
-  const bal2 = await tokenB.timeBalanceOf(signers.address, 1619395996, 666666666666); // startTime 必须大于当前时间
+  const bal2 = await tokenB.timeBalanceOf(signers.address, now, 666666666666); // startTime 必须大于当前时间
   console.log(' addLiquidity 之后  tokenB balance', parseInt(bal2._hex));
 
-  await sleep()
-  await swap(uniRouter, tokenA.address, tokenB.address)
+  // await sleep()
+  // await swap(uniRouter, tokenA.address, tokenB.address)
 
+  // await checkBalance(tokenA, tokenB)
+
+  await removeLiquidity(uniRouter, tokenA.address, tokenB.address, 1111111, 1000002507520, 3999990000128)
   await checkBalance(tokenA, tokenB)
 }
 
@@ -153,7 +165,7 @@ async function router (factory, weth) {
   const uniRouter = await Router.deploy(factory, weth);
 
   await uniRouter.deployed();
-  console.log("Greeter deployed to:", uniRouter.address);
+  console.log("路由合约地址:", uniRouter.address);
   return uniRouter
 }
 
@@ -170,7 +182,8 @@ async function approve(routerAddress, tokenA, tokenB) {
 
 async function addLiquidity(uniRouter, addressA, addressB) {
   console.log("开始调用 addLiquidity");
-  await uniRouter.addLiquidity(
+  const now = getNow() + 400;
+  const res = await uniRouter.addLiquidity(
     addressA,
     addressB,
     "1000000000000",
@@ -179,26 +192,53 @@ async function addLiquidity(uniRouter, addressA, addressB) {
     "40000000000",
     signers.address,
     9999999999999,
-    [1619395996,666666666666,1619395996,666666666666]
+    [now, 666666666666,now,666666666666]
   )
   console.log('addLiquidity 完成');
+  return res;
+}
+
+/*
+        address tokenA,
+        address tokenB,
+        uint liquidity,
+        uint amountAMin,
+        uint amountBMin,
+        address to,
+        uint deadline
+*/ 
+async function removeLiquidity(uniRoute, addressA, addressB, liquidity, amountAMin, amountBMin, to) {
+  console.log('removeLiquidity start')
+  const now = getNow() + 500;
+  await uniRoute.removeLiquidity(
+    addressA,
+    addressB,
+    "1999999999000",
+    "999999999000",
+    "399999999000",
+    signers.address,
+    9999999999999,
+    [now, 666666666666, now, 666666666666]
+  )
+  console.log('removeLiquidity success')
 }
 
 async function swap(uniRouter, addressA, addressB) {
   const swapResult = await uniRouter.swapTokensForExactTokens(
     "1000000000000",
-    "400000000000",
+    "4000000000000",
     [addressA, addressB],
     signers.address,
     999999999999,
-    [1619395996, 666666666666]
+    [now, 666666666666]
   )
     console.log('完成了swap');
 }
 
 async function checkBalance(tokenA, tokenB) {
-  const balanceA = await tokenA.timeBalanceOf(signers.address, 1619395996, 666666666666)
-  const balanceB = await tokenB.timeBalanceOf(signers.address, 1619395996, 666666666666)
+  const now = getNow() + 500;
+  const balanceA = await tokenA.timeBalanceOf(signers.address, now, 666666666666)
+  const balanceB = await tokenB.timeBalanceOf(signers.address, now, 666666666666)
 
   console.log('swap之后A 和 B ',parseInt(balanceA._hex), parseInt(balanceB._hex));
 }

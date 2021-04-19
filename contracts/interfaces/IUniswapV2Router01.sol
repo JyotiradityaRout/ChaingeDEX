@@ -37,7 +37,8 @@ interface IUniswapV2Router01 {
         uint amountAMin,
         uint amountBMin,
         address to,
-        uint deadline
+        uint deadline,
+        uint256[] calldata time
     ) external returns (uint amountA, uint amountB);
     function removeLiquidityETH(
         address token,

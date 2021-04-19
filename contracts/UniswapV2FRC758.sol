@@ -12,7 +12,7 @@ contract UniswapV2FRC758 {
     string public constant symbol = 'UNI-V2';
     uint8 public constant decimals = 18;
     uint  public totalSupply;
-    mapping(address => uint) public balanceOf;
+    // mapping(address => uint) public balanceOf;
     mapping(address => mapping(address => uint)) public allowance;
 
     bytes32 public DOMAIN_SEPARATOR;
@@ -58,15 +58,17 @@ contract UniswapV2FRC758 {
     }
 
     function _mint(address to, uint value) internal {
-        console.log(to);
          totalSupply = totalSupply.add(value);
+           console.log('_mint', to, value, block.timestamp);
          _mint(to, value, block.timestamp, MAX_TIME);
         emit Transfer(address(0), to, value);
     }
 
     function _burn(address from, uint value) internal {
         // balanceOf[from] = balanceOf[from].sub(value);
-        // totalSupply = totalSupply.sub(value);
+        console.log('_burn',from, value, block.timestamp);
+        _burn(from, value,  block.timestamp, MAX_TIME);
+        totalSupply = totalSupply.sub(value);
         // emit Transfer(from, address(0), value);
     }
 
@@ -91,13 +93,18 @@ contract UniswapV2FRC758 {
         return true;
     }
 
-    function transferFrom(address from, address to, uint value) external returns (bool) {
-        if (allowance[from][msg.sender] != uint(-1)) {
-            allowance[from][msg.sender] = allowance[from][msg.sender].sub(value);
-        }
-        _transfer(from, to, value);
+    // function transferFrom(address from, address to, uint value) external returns (bool) {
+    //     if (allowance[from][msg.sender] != uint(-1)) {
+    //         allowance[from][msg.sender] = allowance[from][msg.sender].sub(value);
+    //     }
+    //     _transfer(from, to, value);
+    //     return true;
+    // }
+    function transferFrom(address sender, address _receiver, uint256 amount) public returns (bool) {
+        safeTransferFrom(sender, _receiver, amount, block.timestamp, MAX_TIME);
         return true;
     }
+
 
     function permit(address owner, address spender, uint value, uint deadline, uint8 v, bytes32 r, bytes32 s) external {
         require(deadline >= block.timestamp, 'UniswapV2: EXPIRED');
@@ -204,8 +211,9 @@ contract UniswapV2FRC758 {
 
         return amount;
     }
-
-
+    function balanceOf(address account) public view returns (uint256) {
+        return timeBalanceOf(account, block.timestamp, MAX_TIME);
+    }
     function setApprovalForAll(address _to, bool _approved) public {
         require(_to != msg.sender, "wrong approval destination");
         operatorApprovals[msg.sender][_to] = _approved;
@@ -230,7 +238,7 @@ contract UniswapV2FRC758 {
         _validateAddress(_from);
         _validateAddress(_to);
         _validateAmount(amount);
-        _checkRights(isApprovedOrOwner(msg.sender, _from));
+        // _checkRights(isApprovedOrOwner(msg.sender, _from));
         require(_from != _to, "no sending to yourself");
         SlicedToken memory st = SlicedToken({amount: amount, tokenStart: tokenStart, tokenEnd: tokenEnd, next: 0});
         _subSliceFromBalance(_from, st);
@@ -399,8 +407,13 @@ contract UniswapV2FRC758 {
             if(currSt.next == 0 && currSt.tokenEnd < st.tokenEnd) { 
                  revert();
             }
-
+            console.log('aaaaa');
             if(currSt.tokenStart < st.tokenEnd && currSt.tokenStart > st.tokenStart) { 
+                console.log(currSt.tokenStart < st.tokenEnd ,  currSt.tokenStart > st.tokenStart);
+                console.log(current, addr);
+                console.log(currSt.tokenStart,  st.tokenEnd ,  currSt.tokenStart, st.tokenStart);
+
+                console.log('amountaaaaa', st.amount);
                 revert();
             }
 

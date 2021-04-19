@@ -181,6 +181,7 @@ contract ChaingeSwap is IUniswapV2Router02 {
         uint deadline,
         uint256[] calldata time
     ) external virtual override ensure(deadline) returns (uint amountA, uint amountB, uint liquidity) {
+        console.log('addLiquidity', time[0]);
         (amountA, amountB) = _addLiquidity(tokenA, tokenB, amountADesired, amountBDesired, amountAMin, amountBMin);
 
         liquidity = _addLiquidityByTimeSliceToken(
@@ -191,6 +192,7 @@ contract ChaingeSwap is IUniswapV2Router02 {
             to,
             time
         );
+
     }
 
     function _addLiquidityByTimeSliceToken(
@@ -202,6 +204,8 @@ contract ChaingeSwap is IUniswapV2Router02 {
             uint256[] memory time
     ) internal returns(uint liquidity) {
         address pair = IUniswapV2Factory(factory).getPair(tokenA, tokenB);
+        console.log( tokenA,tokenB, amountA, amountB );
+        console.log('router pair', pair);
         TransferHelper.safeTransferFrom(tokenA, msg.sender, pair, amountA, time[0], time[1]);
         TransferHelper.safeTransferFrom(tokenB, msg.sender, pair, amountB, time[2], time[3]);
         liquidity = IUniswapV2Pair(pair).mint(to, time);
@@ -242,13 +246,21 @@ contract ChaingeSwap is IUniswapV2Router02 {
         uint amountAMin,
         uint amountBMin,
         address to,
-        uint deadline
+        uint deadline,
+        uint256[] memory time
     ) public virtual override ensure(deadline) returns (uint amountA, uint amountB) {
-        address pair = UniswapV2Library.pairFor(factory, tokenA, tokenB);
+
+        address pair = IUniswapV2Factory(factory).getPair(tokenA, tokenB);
+        // console.log("pair", msg.sender, pair, liquidity);
         IUniswapV2Pair(pair).transferFrom(msg.sender, pair, liquidity); // send liquidity to pair
-        (uint amount0, uint amount1) = IUniswapV2Pair(pair).burn(to);
-        (address token0,) = UniswapV2Library.sortTokens(tokenA, tokenB);
-        (amountA, amountB) = tokenA == token0 ? (amount0, amount1) : (amount1, amount0);
+         console.log("liquidity send success to pair");
+        (uint amount0, uint amount1) = IUniswapV2Pair(pair).burn(to, time);
+    
+        // (address token0,) = UniswapV2Library.sortTokens(tokenA, tokenB);
+        // (amountA, amountB) = tokenA == token0 ? (amount0, amount1) : (amount1, amount0);
+        (amountA, amountB) = (amount0, amount1);
+        console.log('removeLiquidity' ,amountA, amountAMin);
+        console.log( amountB, amountBMin);
         require(amountA >= amountAMin, 'UniswapV2Router: INSUFFICIENT_A_AMOUNT');
         require(amountB >= amountBMin, 'UniswapV2Router: INSUFFICIENT_B_AMOUNT');
     }
@@ -261,18 +273,18 @@ contract ChaingeSwap is IUniswapV2Router02 {
         address to,
         uint deadline
     ) public virtual override ensure(deadline) returns (uint amountToken, uint amountETH) {
-        (amountToken, amountETH) = removeLiquidity(
-            token,
-            WETH,
-            liquidity,
-            amountTokenMin,
-            amountETHMin,
-            address(this),
-            deadline
-        );
-        TransferHelper.safeTransfer(token, to, amountToken);
-        IWETH(WETH).withdraw(amountETH);
-        TransferHelper.safeTransferETH(to, amountETH);
+        // (amountToken, amountETH) = removeLiquidity(
+        //     token,
+        //     WETH,
+        //     liquidity,
+        //     amountTokenMin,
+        //     amountETHMin,
+        //     address(this),
+        //     deadline
+        // );
+        // TransferHelper.safeTransfer(token, to, amountToken);
+        // IWETH(WETH).withdraw(amountETH);
+        // TransferHelper.safeTransferETH(to, amountETH);
     }
     function removeLiquidityWithPermit(
         address tokenA,
@@ -284,10 +296,10 @@ contract ChaingeSwap is IUniswapV2Router02 {
         uint deadline,
         bool approveMax, uint8 v, bytes32 r, bytes32 s
     ) external virtual override returns (uint amountA, uint amountB) {
-        address pair = UniswapV2Library.pairFor(factory, tokenA, tokenB);
-        uint value = approveMax ? uint(-1) : liquidity;
-        IUniswapV2Pair(pair).permit(msg.sender, address(this), value, deadline, v, r, s);
-        (amountA, amountB) = removeLiquidity(tokenA, tokenB, liquidity, amountAMin, amountBMin, to, deadline);
+        // address pair = UniswapV2Library.pairFor(factory, tokenA, tokenB);
+        // uint value = approveMax ? uint(-1) : liquidity;
+        // IUniswapV2Pair(pair).permit(msg.sender, address(this), value, deadline, v, r, s);
+        // (amountA, amountB) = removeLiquidity(tokenA, tokenB, liquidity, amountAMin, amountBMin, to, deadline);
     }
     function removeLiquidityETHWithPermit(
         address token,
@@ -313,18 +325,18 @@ contract ChaingeSwap is IUniswapV2Router02 {
         address to,
         uint deadline
     ) public virtual override ensure(deadline) returns (uint amountETH) {
-        (, amountETH) = removeLiquidity(
-            token,
-            WETH,
-            liquidity,
-            amountTokenMin,
-            amountETHMin,
-            address(this),
-            deadline
-        );
-        TransferHelper.safeTransfer(token, to, IERC20(token).balanceOf(address(this)));
-        IWETH(WETH).withdraw(amountETH);
-        TransferHelper.safeTransferETH(to, amountETH);
+        // (, amountETH) = removeLiquidity(
+        //     token,
+        //     WETH,
+        //     liquidity,
+        //     amountTokenMin,
+        //     amountETHMin,
+        //     address(this),
+        //     deadline
+        // );
+        // TransferHelper.safeTransfer(token, to, IERC20(token).balanceOf(address(this)));
+        // IWETH(WETH).withdraw(amountETH);
+        // TransferHelper.safeTransferETH(to, amountETH);
     }
     function removeLiquidityETHWithPermitSupportingFeeOnTransferTokens(
         address token,

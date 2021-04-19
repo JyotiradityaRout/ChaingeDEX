@@ -46,9 +46,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2FRC758 {
     }
 
     function _safeTransfer(address token, address to, uint value, uint256 tokenStart, uint256 tokenEnd) private {
-        console.log('this????', token, value);
         (bool success, bytes memory data) = token.call(abi.encodeWithSelector(SELECTOR, address(this), to, value, tokenStart, tokenEnd));
-        console.log(success);
         require(success && (data.length == 0 || abi.decode(data, (bool))), 'UniswapV2: TRANSFER_FAILED');
     }
 
@@ -149,28 +147,43 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2FRC758 {
     }
 
     // this low-level function should be called from a contract which performs important safety checks
-    function burn(address to) external lock returns (uint amount0, uint amount1) {
-        // (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
-        // address _token0 = token0;                                // gas savings
-        // address _token1 = token1;                                // gas savings
+    function burn(address to, uint256[] calldata time) external lock returns (uint amount0, uint amount1) {
+        (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
+        address _token0 = token0._address;
+        address _token1 = token1._address;                             // gas savings
         // uint balance0 = IERC20(_token0).balanceOf(address(this));
         // uint balance1 = IERC20(_token1).balanceOf(address(this));
+        uint256 balance0 = IFRC758(token0._address).timeBalanceOf(address(this), time[0], time[1]);
+        uint256 balance1 = IFRC758(token1._address).timeBalanceOf(address(this), time[2], time[3]);
         // uint liquidity = balanceOf[address(this)];
+         uint liquidity = timeBalanceOf(address(this), time[0], time[1]);
 
-        // bool feeOn = _mintFee(_reserve0, _reserve1);
-        // uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
-        // amount0 = liquidity.mul(balance0) / _totalSupply; // using balances ensures pro-rata distribution
-        // amount1 = liquidity.mul(balance1) / _totalSupply; // using balances ensures pro-rata distribution
-        // require(amount0 > 0 && amount1 > 0, 'UniswapV2: INSUFFICIENT_LIQUIDITY_BURNED');
-        // _burn(address(this), liquidity);
-        // _safeTransfer(_token0, to, amount0);
-        // _safeTransfer(_token1, to, amount1);
-        // balance0 = IERC20(_token0).balanceOf(address(this));
-        // balance1 = IERC20(_token1).balanceOf(address(this));
-
-        // _update(balance0, balance1, _reserve0, _reserve1);
-        // if (feeOn) kLast = uint(reserve0).mul(reserve1); // reserve0 and reserve1 are up-to-date
-        // emit Burn(msg.sender, amount0, amount1, to);
+        // console.log('_address:',token0._address, token1._address);
+        // console.log( time[0], time[1]);
+        // console.log( time[2], time[3]);
+        console.log('balance:',balance0, balance1);
+        console.log('liquidity' , address(this), liquidity, totalSupply);
+            console.log('time:',time[0], time[1]);
+        bool feeOn = _mintFee(_reserve0, _reserve1);
+        uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
+       
+        
+        amount0 = liquidity.mul(balance0) / _totalSupply; // using balances ensures pro-rata distribution
+        amount1 = liquidity.mul(balance1) / _totalSupply; // using balances ensures pro-rata distribution
+        console.log(amount0, amount1);
+        require(amount0 > 0 && amount1 > 0, 'UniswapV2: INSUFFICIENT_LIQUIDITY_BURNED');
+        console.log('ffffffff', liquidity);
+        _burn(address(this), liquidity);
+          console.log('abv');
+        _safeTransfer(_token0, to, amount0, token0.tokenStart, token0.tokenEnd);
+            console.log('ert');
+        _safeTransfer(_token1, to, amount1, token1.tokenStart, token1.tokenEnd);
+        balance0 = IFRC758(_token0).timeBalanceOf(address(this), token0.tokenStart, token0.tokenEnd);
+        balance1 = IFRC758(_token1).timeBalanceOf(address(this), token1.tokenStart, token1.tokenEnd);
+        console.log('balance aft:',balance0, balance1);
+        _update(balance0, balance1, _reserve0, _reserve1);
+        if (feeOn) kLast = uint(reserve0).mul(reserve1); // reserve0 and reserve1 are up-to-date
+        emit Burn(msg.sender, amount0, amount1, to);
     }
 
     // this low-level function should be called from a contract which performs important safety checks
