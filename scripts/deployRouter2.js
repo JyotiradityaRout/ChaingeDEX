@@ -10,7 +10,7 @@ async function main() {
         forSwap,
         utils,
         {
-            startTime: 0,
+            startTime: parseInt(Date.now() / 1000),
             endTime: 666666666666,
             amountA: utils.addZero(1, 18),
             amountB: utils.addZero(45, 17),

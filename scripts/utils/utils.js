@@ -58,8 +58,8 @@ module.exports.frc758 = async (_s, config) => {
     await tokenA.deployed();
 
     await sleep()
-    await tokenA.mint(signers.address, config.amountA)
-    await tokenA.mint(forSwap.address, config.amountA)
+    await tokenA.mintTimeSlice(signers.address, config.amountA, config.startTime, config.endTime)
+    await tokenA.mintTimeSlice(forSwap.address, config.amountA, config.startTime, config.endTime)
     console.log('toeknA address:', tokenA.address)
     const bal = await tokenA.balanceOf(signers.address); // startTime 必须大于当前时间
     console.log('tokenA balance:', parseInt(bal._hex))
@@ -69,8 +69,8 @@ module.exports.frc758 = async (_s, config) => {
     const tokenB = await FRC758.deploy("TokenB", "F2", 18);
     await tokenB.deployed();
     await sleep()
-    await tokenB.mint(signers.address, config.amountB)
-    // await tokenB.mint(forSwap.address, config.amountB, config.startTime, config.endTime)
+    await tokenB.mintTimeSlice(signers.address, config.amountB, config.startTime, config.endTime)
+    // await tokenB.mint(forSwap.address, config.amountB)
     console.log('toeknB address:', tokenB.address)
     const bal2 = await tokenB.balanceOf(signers.address); // startTime 必须大于当前时间
     console.log('tokenB balance:', parseInt(bal2._hex))
@@ -153,7 +153,7 @@ module.exports.addLiquidity = async (signers, uniRouter, addressA, addressB, con
         config.amountBMin,
         signers.address,
         9999999999999,
-        [config.startTime, config.endTime, config.startTime, config.endTime]
+        [config.startTime + 100, config.endTime, config.startTime + 100, config.endTime]
     )
     console.log(`amountADesired / amountBDesired: ${config.amountADesired / config.amountBDesired}, \n amountBDesired / amountADesired: ${config.amountBDesired / config.amountADesired}, `)
 }
@@ -177,11 +177,11 @@ module.exports.checkBalance = async function checkBalance(timer = config.checkTI
     return [parseInt(balanceA._hex), parseInt(balanceB._hex)].toString()
 }
 
-module.exports.addZero = (_p, _l)=>{
+module.exports.addZero = (_p, _l) => {
     return _p + new Array(_l).fill(0).join('')
 }
 
-module.exports._checkBalance = async (timer = config.checkTImer, signers, token)=>{
+module.exports._checkBalance = async (timer = config.checkTImer, signers, token) => {
     const balance = await token.balanceOf(signers.address)
     return parseInt(balance._hex)
 }
