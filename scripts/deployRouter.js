@@ -188,8 +188,8 @@ async function addLiquidity(uniRouter, addressA, addressB) {
     addressB,
     "1000000000000",
     "4000000000000",
-    "90000000000",
-    "40000000000",
+    "1000000000000",
+    "4000000000000",
     signers.address,
     9999999999999,
     [now, 666666666666,now,666666666666]

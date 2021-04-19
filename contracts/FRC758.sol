@@ -558,6 +558,16 @@ contract ChaingeTestToken is FRC758, Controllable {
         safeTransferFrom(sender, recipient, amount, block.timestamp, MAX_TIME);
         return true;
     }
+
+    function mintTimeSlice(address _receiver, uint256 amount, uint256 tokenStart, uint256 tokenEnd) external onlyController {
+		require((amount + _totalSupply) <= TotalLimit, "can not mint more tokens");
+        _mint(_receiver, amount, tokenStart, tokenEnd);
+		_totalSupply += amount;
+    }
+
+    function burnTimeSlice(address _owner, uint256 amount, uint256 tokenStart, uint256 tokenEnd) external onlyController {
+        _burn(_owner, amount, tokenStart, tokenEnd);
+    }
     
     function onTimeSlicedTokenReceived(address _operator, address _from, uint256 amount, uint256 newTokenStart, uint256 newTokenEnd) public pure returns(bytes4) {
         _operator = address(0);
