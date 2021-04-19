@@ -202,16 +202,8 @@ contract ChaingeSwap is IUniswapV2Router02 {
             uint256[] memory time
     ) internal returns(uint liquidity) {
         address pair = IUniswapV2Factory(factory).getPair(tokenA, tokenB);
-        // console.log(amountA, amountB, pair);
-
         TransferHelper.safeTransferFrom(tokenA, msg.sender, pair, amountA, time[0], time[1]);
         TransferHelper.safeTransferFrom(tokenB, msg.sender, pair, amountB, time[2], time[3]);
-        // uint256 balance = IFRC758(tokenA).balanceOf(msg.sender, 1617412453, 666666666666);
-        // console.log('aft', balance);
-        // uint256 balance1 = IFRC758(tokenA).balanceOf(msg.sender, 1617412453, 666666666666);
-        // console.log('aft',msg.sender, balance1, amountA);
-
-        // uint256 balanceP = IFRC758(tokenA).balanceOf(pair, 1617412453, 666666666666, false);
         liquidity = IUniswapV2Pair(pair).mint(to, time);
     }
 

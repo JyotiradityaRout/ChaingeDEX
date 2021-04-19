@@ -33,17 +33,13 @@ contract UniswapV2Factory is IUniswapV2Factory {
         require(token0 != address(0), 'UniswapV2: ZERO_ADDRESS');
         require(getPair[token0][token1] == address(0), 'UniswapV2: PAIR_EXISTS'); // single check is sufficient
         bytes memory bytecode = type(UniswapV2Pair).creationCode;
-        console.log('aaaaaaaaaaa');
         // bytes32 salt = keccak256(abi.encodePacked(token0, token1));
         assembly {
             // pair := create2(0, add(bytecode, 32), mload(bytecode), salt)
             pair := create(0, add(bytecode, 32), mload(bytecode))
         }
-        
-        console.log('bbbbb', time[0]);
 
         IUniswapV2Pair(pair).initialize(token0, token1, time);
-             console.log('cccccc', time[0]);
         getPair[token0][token1] = pair;
         getPair[token1][token0] = pair; // populate mapping in the reverse direction
         allPairs.push(pair);
