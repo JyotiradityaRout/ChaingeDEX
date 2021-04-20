@@ -82,7 +82,7 @@ async function sleep() {
   return new Promise(function(res, rej) {
       setTimeout(() => {
           res()
-      }, 0)
+      }, 10000)
   })
 }
 
