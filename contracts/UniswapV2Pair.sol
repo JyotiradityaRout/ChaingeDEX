@@ -161,9 +161,9 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2FRC758 {
         // console.log('_address:',token0._address, token1._address);
         // console.log( time[0], time[1]);
         // console.log( time[2], time[3]);
-        console.log('balance:',balance0, balance1);
-        console.log('liquidity' , address(this), liquidity, totalSupply);
-            console.log('time:',time[0], time[1]);
+        // console.log('balance:',balance0, balance1);
+        // console.log('liquidity' , address(this), liquidity, totalSupply);
+        //     console.log('time:',time[0], time[1]);
         bool feeOn = _mintFee(_reserve0, _reserve1);
         uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
        
@@ -172,7 +172,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2FRC758 {
         amount1 = liquidity.mul(balance1) / _totalSupply; // using balances ensures pro-rata distribution
         console.log(amount0, amount1);
         require(amount0 > 0 && amount1 > 0, 'UniswapV2: INSUFFICIENT_LIQUIDITY_BURNED');
-        console.log('ffffffff', liquidity);
+        // console.log('ffffffff', liquidity);
         _burn(address(this), liquidity);
           console.log('abv');
         _safeTransfer(_token0, to, amount0, token0.tokenStart, token0.tokenEnd);
