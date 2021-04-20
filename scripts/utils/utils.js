@@ -40,7 +40,6 @@ module.exports.mint = async (forLiquidity, forSwap, utils, params) => {
     const bal2 = await tokenB.balanceOf(forLiquidity.address); // startTime 必须大于当前时间
     console.log('tokenB balance', parseInt(bal2._hex), parseInt(bal2._hex).length);
 
-    console.log('res', res)
     console.log('-------------- addLiquidity --------------')
 
     // console.log('-------------- swap --------------')

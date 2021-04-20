@@ -79,26 +79,26 @@ async function main() {
             amountOut: utils.addZero(9, 13),
             amountInMax: utils.addZero(4, 13),
             // removeLiquidity
-            liquidity: '1',
+            liquidity: utils.addZero(1, 15),
             amountAMin: 0,
             amountBMin: 0
         }
     )
     // x*y=k
     //  
-    const balanceA = await utils._checkBalance([0, 666666666666], forSwap, tokenA)
-    const balanceB = await utils._checkBalance([0, 666666666666], forSwap, tokenB)
+    // const balanceA = await utils._checkBalance([0, 666666666666], forSwap, tokenA)
+    // const balanceB = await utils._checkBalance([0, 666666666666], forSwap, tokenB)
     const balanceC = await utils._checkBalance([0, 666666666666], forLiquidity, tokenA)
     const balanceD = await utils._checkBalance([0, 666666666666], forLiquidity, tokenB)
 
-    const swap_k = (amountA - balanceC) * (amountB - balanceD)
+    // const swap_k = (amountA - balanceC) * (amountB - balanceD)
 
     console.log('---------- mint后 ----------')
-    console.log('TokenA: ', amountA)
-    console.log('TokenB: ', amountB)
+    // console.log('TokenA: ', amountA)
+    // console.log('TokenB: ', amountB)
     console.log('---------- removeLiquidity后 ----------')
-    console.log('TokenA: ', balanceC)
-    console.log('TokenB: ', balanceD)
+    // console.log('TokenA: ', balanceC)
+    // console.log('TokenB: ', balanceD)
 
     // console.log('-------------- swap --------------')
     console.log('-------------- removeLiquidity --------------')
