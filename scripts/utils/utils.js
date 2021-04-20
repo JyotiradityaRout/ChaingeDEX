@@ -1,4 +1,4 @@
-const config = require("../config"); 
+const config = require("../config");
 const hre = require("hardhat");
 
 async function sleep() {
@@ -32,18 +32,26 @@ module.exports.mint = async (forLiquidity, forSwap, utils, params) => {
     console.log('-------------- addLiquidity --------------')
     await sleep()
 
-    await utils.addLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, params)
+    const res = await utils.addLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, params)
 
     const bal = await tokenA.balanceOf(forLiquidity.address); // startTime 必须大于当前时间
     console.log('tokenA balance', parseInt(bal._hex), parseInt(bal._hex).length);
 
     const bal2 = await tokenB.balanceOf(forLiquidity.address); // startTime 必须大于当前时间
     console.log('tokenB balance', parseInt(bal2._hex), parseInt(bal2._hex).length);
+
+    console.log('res', res)
     console.log('-------------- addLiquidity --------------')
 
-    console.log('-------------- swap --------------')
+    // console.log('-------------- swap --------------')
+    console.log('-------------- removeLiquidity --------------')
+    
     await sleep()
-    await utils.swap(forSwap, uniRouter, tokenA.address, tokenB.address, params)
+
+    // await utils.swap(forSwap, uniRouter, tokenA.address, tokenB.address, params)
+    await utils.removeLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, params)
+
+
     return { tokenA, tokenB }
 }
 
@@ -144,7 +152,7 @@ module.exports.approve = async (routerAddress, tokenA, tokenB) => {
 }
 
 module.exports.addLiquidity = async (signers, uniRouter, addressA, addressB, config) => {
-    await uniRouter.addLiquidity(
+    return await uniRouter.addLiquidity(
         addressA,
         addressB,
         config.amountADesired,
@@ -155,7 +163,20 @@ module.exports.addLiquidity = async (signers, uniRouter, addressA, addressB, con
         9999999999999,
         [config.startTime, config.endTime, config.startTime, config.endTime]
     )
-    console.log(`amountADesired / amountBDesired: ${config.amountADesired / config.amountBDesired}, \n amountBDesired / amountADesired: ${config.amountBDesired / config.amountADesired}, `)
+}
+
+module.exports.removeLiquidity = async (signers, uniRoute, addressA, addressB, config) => {
+    await uniRoute.removeLiquidity(
+        addressA,
+        addressB,
+        config.liquidity,
+        config.amountAMin,
+        config.amountBMin,
+        signers.address,
+        9999999999999,
+        [config.startTime, config.endTime, config.startTime, config.endTime]
+    )
+    console.log('removeLiquidity success')
 }
 
 module.exports.swap = async (signers, uniRouter, addressA, addressB, config) => {
