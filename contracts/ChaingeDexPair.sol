@@ -1,19 +1,18 @@
 pragma solidity =0.5.16;
 
-import './interfaces/IUniswapV2Pair.sol';
-import './UniswapV2ERC20.sol';
+import './interfaces/IChaingeDexPair.sol';
 import '@uniswap/v2-core/contracts/libraries/Math.sol';
 import '@uniswap/v2-core/contracts/libraries/UQ112x112.sol';
 import '@uniswap/v2-core/contracts/interfaces/IERC20.sol';
-import './interfaces/IUniswapV2Factory.sol';
+import './interfaces/IChaingeDexFactory.sol';
 
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Callee.sol';
 
 import './interfaces/IFRC758.sol';
-import './UniswapV2FRC758.sol';
+import './ChaingeDexFRC758.sol';
 import "@nomiclabs/buidler/console.sol";
 
-contract UniswapV2Pair is IUniswapV2Pair, UniswapV2FRC758 {
+contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
     using SafeMath  for uint;
     using UQ112x112 for uint224;
 
@@ -33,7 +32,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2FRC758 {
 
     uint private unlocked = 1;
     modifier lock() {
-        require(unlocked == 1, 'UniswapV2: LOCKED');
+        require(unlocked == 1, 'ChaingeDex: LOCKED');
         unlocked = 0;
         _;
         unlocked = 1;
@@ -101,7 +100,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2FRC758 {
 
     // if fee is on, mint liquidity equivalent to 1/6th of the growth in sqrt(k)
     function _mintFee(uint112 _reserve0, uint112 _reserve1) private returns (bool feeOn) {
-        address feeTo = IUniswapV2Factory(factory).feeTo();
+        address feeTo = IChaingeDexFactory(factory).feeTo();
         feeOn = feeTo != address(0);
         uint _kLast = kLast; // gas savings
         if (feeOn) {

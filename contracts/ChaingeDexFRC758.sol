@@ -1,10 +1,9 @@
 pragma solidity =0.5.16;
 
-// import '@uniswap/v2-core/contracts/interfaces/IUniswapV2ERC20.sol';
 import '@uniswap/v2-core/contracts/libraries/SafeMath.sol';
 import "@nomiclabs/buidler/console.sol";
 
-contract UniswapV2FRC758 {
+contract ChaingeDexFRC758 {
     
     using SafeMath for uint;
 

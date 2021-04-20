@@ -4,18 +4,23 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "npx hardhat run  scripts/deployRouter.js --network localhost"
+    "deploy": "npx hardhat run  scripts/deployRouter.js --network localhost",
+    "test": "npx hardhat test"
   },
-  "author": "",
+  "author": "Jimzhou",
   "license": "ISC",
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "@types/chai": "^4.2.6",
+    "@types/mocha": "^5.2.7",
     "chai": "^4.3.4",
-    "ethereum-waffle": "^3.3.0",
+    "ethereum-waffle": "^2.2.0",
     "ethers": "^5.0.32",
     "hardhat": "^2.1.2",
-    "mocha": "^8.3.2"
+    "mocha": "^8.3.2",
+    "ts-node": "^8.5.4",
+    "typescript": "^3.7.3"
   },
   "dependencies": {
     "@nomiclabs/buidler": "^1.4.8",

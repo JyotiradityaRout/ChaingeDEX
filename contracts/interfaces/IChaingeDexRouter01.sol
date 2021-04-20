@@ -7,7 +7,7 @@ struct SlicedToken {
     uint256 tokenEnd; //token end blockNumber or timestamp, use MAX_UINT for timestamp, MAX_BLOCKNUMBER for blockNumber.
 }
 
-interface IUniswapV2Router01 {
+interface IChaingeDexRouter01 {
     function factory() external pure returns (address);
     function WETH() external pure returns (address);
 

@@ -2,11 +2,11 @@ pragma solidity =0.5.16;
 
 // import "@nomiclabs/buidler/console.sol";
 
-import './interfaces/IUniswapV2Factory.sol';
+import './interfaces/IChaingeDexFactory.sol';
 
-import './UniswapV2Pair.sol';
+import './ChaingeDexPair.sol';
 
-contract UniswapV2Factory is IUniswapV2Factory {
+contract ChaingeDexFactory is IChaingeDexFactory {
     address public feeTo;
     address public feeToSetter;
 
@@ -30,14 +30,14 @@ contract UniswapV2Factory is IUniswapV2Factory {
 
         require(token0 != address(0), 'UniswapV2: ZERO_ADDRESS');
         require(getPair[token0][token1] == address(0), 'UniswapV2: PAIR_EXISTS'); // single check is sufficient
-        bytes memory bytecode = type(UniswapV2Pair).creationCode;
+        bytes memory bytecode = type(ChaingeDexPair).creationCode;
         // bytes32 salt = keccak256(abi.encodePacked(token0, token1));
         assembly {
             // pair := create2(0, add(bytecode, 32), mload(bytecode), salt)
             pair := create(0, add(bytecode, 32), mload(bytecode))
         }
 
-        IUniswapV2Pair(pair).initialize(token0, token1, time);
+        IChaingeDexPair(pair).initialize(token0, token1, time);
         getPair[token0][token1] = pair;
         getPair[token1][token0] = pair; // populate mapping in the reverse direction
         allPairs.push(pair);
