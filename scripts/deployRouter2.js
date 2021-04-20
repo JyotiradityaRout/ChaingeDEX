@@ -59,49 +59,48 @@ const utils = require('./utils/utils');
 async function main() {
     const [forLiquidity, forSwap] = await hre.ethers.getSigners();
     console.log('\x1B[32m%s\x1B[40m', '-------------- Start --------------')
-    const amountA = utils.addZero(1, 16);
-    const amountB = utils.addZero(35, 16);
+    const amountA = utils.addZero(1, 18);
+    const amountB = utils.addZero(35, 17);
+    const timer = parseInt(Date.now() / 1000)
     let { tokenA, tokenB } = await utils.mint(
         forLiquidity,
         forSwap,
         utils,
         {
-            startTime: parseInt(Date.now() / 1000),
+            startTime: timer,
             endTime: 666666666666,
             amountA,
             amountB,
             // 流动性充的量
-            amountADesired: utils.addZero(1, 15),
-            amountBDesired: utils.addZero(4, 16),
+            amountADesired: utils.addZero(1, 12),
+            amountBDesired: utils.addZero(4, 12),
             // 下面两两比例相同
-            amountAMin: utils.addZero(9, 10),
-            amountBMin: utils.addZero(4, 10),
-            amountOut: utils.addZero(9, 13),
-            amountInMax: utils.addZero(4, 13),
+            amountAMin: utils.addZero(1, 12),
+            amountBMin: utils.addZero(4, 12),
+            amountOut: utils.addZero(1, 12),
+            amountInMax: utils.addZero(4, 12),
             // removeLiquidity
-            liquidity: utils.addZero(1, 15),
+            liquidity: utils.addZero(1, 12),
             amountAMin: 0,
             amountBMin: 0
         }
     )
     // x*y=k
     //  
-    // const balanceA = await utils._checkBalance([0, 666666666666], forSwap, tokenA)
-    // const balanceB = await utils._checkBalance([0, 666666666666], forSwap, tokenB)
-    const balanceC = await utils._checkBalance([0, 666666666666], forLiquidity, tokenA)
-    const balanceD = await utils._checkBalance([0, 666666666666], forLiquidity, tokenB)
+    const balanceA = await utils._checkBalance([timer, 666666666666], forSwap, tokenA)
+    const balanceB = await utils._checkBalance([timer, 666666666666], forSwap, tokenB)
+    const balanceC = await utils._checkBalance([timer, 666666666666], forLiquidity, tokenA)
+    const balanceD = await utils._checkBalance([timer, 666666666666], forLiquidity, tokenB)
 
     // const swap_k = (amountA - balanceC) * (amountB - balanceD)
 
-    console.log('---------- mint后 ----------')
+    // console.log('---------- mint后 ----------')
     // console.log('TokenA: ', amountA)
     // console.log('TokenB: ', amountB)
-    console.log('---------- removeLiquidity后 ----------')
     // console.log('TokenA: ', balanceC)
     // console.log('TokenB: ', balanceD)
 
     // console.log('-------------- swap --------------')
-    console.log('-------------- removeLiquidity --------------')
     console.log('\x1B[32m%s\x1B[0m', '-------------- End --------------')
     return { balanceA, balanceB }
 }
