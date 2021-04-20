@@ -18,6 +18,9 @@ module.exports.mint = async (forLiquidity, forSwap, utils, params) => {
 
     console.log('-------------- frc758 --------------')
     const { tokenA, tokenB } = await utils.frc758([forLiquidity, forSwap], params)
+    const mint = await tokenA.timeBalanceOf(forLiquidity.address, params.startTime, params.endTime); // startTime 必须大于当前时间
+    const mint2 = await tokenB.timeBalanceOf(forLiquidity.address, params.startTime, params.endTime); // startTime 必须大于当前时间
+
     console.log('-------------- frc758 --------------')
 
     await sleep()
@@ -47,14 +50,21 @@ module.exports.mint = async (forLiquidity, forSwap, utils, params) => {
     console.log('-------------- removeLiquidity --------------')
     await sleep()
     // await utils.swap(forSwap, uniRouter, tokenA.address, tokenB.address, params)
-    await utils.removeLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, params)
-    const bal3 = await tokenA.timeBalanceOf(forLiquidity.address, params.startTime, params.endTime); // startTime 必须大于当前时间
+    await utils.removeLiquidity(forSwap, uniRouter, tokenA.address, tokenB.address, params)
+    const bal3 = await tokenA.timeBalanceOf(forSwap.address, params.startTime, params.endTime); // startTime 必须大于当前时间
     console.log('tokenA balance', parseInt(bal3._hex));
 
-    const bal4 = await tokenB.timeBalanceOf(forLiquidity.address, params.startTime, params.endTime); // startTime 必须大于当前时间
+    const bal4 = await tokenB.timeBalanceOf(forSwap.address, params.startTime, params.endTime); // startTime 必须大于当前时间
     console.log('tokenB balance', parseInt(bal4._hex));
     console.log('-------------- removeLiquidity --------------')
 
+
+    console.log('-------------- remove后 --------------')
+    console.log(`当前tokenA `, +bal3 + +bal)
+    console.log('tokenA差值', +mint - +bal3 + +bal)
+    console.log(`当前tokenB `, +bal2 + +bal4)
+    console.log('tokenB差值', +mint2 - +bal2 + +bal4)
+    console.log('-------------- remove后 --------------')
 
     return { tokenA, tokenB }
 }
@@ -71,7 +81,7 @@ module.exports.frc758 = async (_s, config) => {
 
     await sleep()
     await tokenA.mintTimeSlice(signers.address, config.amountA, config.startTime, config.endTime)
-    await tokenA.mintTimeSlice(forSwap.address, config.amountA, config.startTime, config.endTime)
+    // await tokenA.mintTimeSlice(forSwap.address, config.amountA, config.startTime, config.endTime)
     console.log('toeknA address:', tokenA.address)
     const bal = await tokenA.timeBalanceOf(signers.address, config.startTime, config.endTime); // startTime 必须大于当前时间
     console.log('tokenA balance:', parseInt(bal._hex))
