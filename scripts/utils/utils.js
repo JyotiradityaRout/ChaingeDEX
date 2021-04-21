@@ -177,12 +177,12 @@ module.exports.addLiquidity = async (signers, uniRouter, addressA, addressB, con
     return res
 }
 
-module.exports.removeLiquidity = async (signers, uniRoute, addressA, addressB, config) => {
+module.exports.removeLiquidity = async (signers, uniRoute, addressA, addressB, liq, config) => {
     console.log('-------------- removeLiquidity --------------')
     const res = await uniRoute.removeLiquidity(
         addressA,
         addressB,
-        config.liquidity,
+        liq,
         config.amountAMin,
         config.amountBMin,
         signers.address,

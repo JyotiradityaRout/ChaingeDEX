@@ -78,7 +78,7 @@ async function main() {
         amountOut: utils.addZero(1, 12),
         amountInMax: utils.addZero(4, 12),
         // removeLiquidity
-        liquidity: utils.addZero(1, 12),
+        // liquidity: utils.addZero(1, 12),
         amountAMin: 0,
         amountBMin: 0
     }
@@ -102,12 +102,15 @@ async function main() {
     const deltaA = afterMint[0] - afterAddLiquidity[0]
     const deltaB = afterMint[1] - afterAddLiquidity[1]
     const k = (deltaA) * (deltaB)
+    // 1000是最小流通量
+    const liq = Math.sqrt(deltaA * deltaB) - 1000
     console.log(`TokenA充了: ${deltaA}`)
     console.log(`TokenB充了: ${deltaB}`)
     console.log(`k: ${k}`)
+    console.log(`理论上liquidity的值：${liq}`)
 
 
-    await utils.removeLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, config)
+    await utils.removeLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, utils.addZero(1, 12), config)
     const afterRemoveLiquidity = await utils.checkBalance(forLiquidity, tokenA, tokenB, config)
     const removeDeltaA = afterRemoveLiquidity[0] - afterAddLiquidity[0]
     const removeDeltaB = afterRemoveLiquidity[1] - afterAddLiquidity[1]
