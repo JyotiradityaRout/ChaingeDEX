@@ -77,14 +77,14 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
 
     // called once by the factory at time of deployment
     function initialize(address _token0, address _token1, uint256[] calldata time) external {
-        require(msg.sender == factory, 'UniswapV2: FORBIDDEN'); // sufficient check
+        require(msg.sender == factory, 'ChaingeDex: FORBIDDEN'); // sufficient check
         token0 = SliceAccount(_token0, time[0], time[1]);
         token1 = SliceAccount(_token1, time[2], time[3]);
     }
 
     // update reserves and, on the first call per block, price accumulators
     function _update(uint balance0, uint balance1, uint112 _reserve0, uint112 _reserve1) private {
-        require(balance0 <= uint112(-1) && balance1 <= uint112(-1), 'UniswapV2: OVERFLOW');
+        require(balance0 <= uint112(-1) && balance1 <= uint112(-1), 'ChaingeDex: OVERFLOW');
         uint32 blockTimestamp = uint32(block.timestamp % 2**32);
         uint32 timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
         if (timeElapsed > 0 && _reserve0 != 0 && _reserve1 != 0) {
@@ -135,7 +135,7 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
         } else {
             liquidity = Math.min(amount0.mul(_totalSupply) / _reserve0, amount1.mul(_totalSupply) / _reserve1);
         }
-        require(liquidity > 0, 'UniswapV2: INSUFFICIENT_LIQUIDITY_MINTED');
+        require(liquidity > 0, 'ChaingeDex: INSUFFICIENT_LIQUIDITY_MINTED');
         _mint(to, liquidity);
 
         _update(balance0, balance1, _reserve0, _reserve1);
@@ -158,7 +158,7 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
         amount0 = liquidity.mul(balance0) / _totalSupply; // using balances ensures pro-rata distribution
         amount1 = liquidity.mul(balance1) / _totalSupply; // using balances ensures pro-rata distribution
         console.log(amount0, amount1);
-        require(amount0 > 0 && amount1 > 0, 'UniswapV2: INSUFFICIENT_LIQUIDITY_BURNED');
+        require(amount0 > 0 && amount1 > 0, 'ChaingeDex: INSUFFICIENT_LIQUIDITY_BURNED');
         // console.log('ffffffff', liquidity);
         _burn(address(this), liquidity);
           console.log('abv');
@@ -175,33 +175,32 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
 
     // this low-level function should be called from a contract which performs important safety checks
     function swap(uint amount0Out, uint amount1Out, address to, bytes calldata data) external lock {
-        require(amount0Out > 0 || amount1Out > 0, 'UniswapV2: INSUFFICIENT_OUTPUT_AMOUNT');
+        require(amount0Out > 0 || amount1Out > 0, 'ChaingeDex: INSUFFICIENT_OUTPUT_AMOUNT');
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
-        require(amount0Out < _reserve0 && amount1Out < _reserve1, 'UniswapV2: INSUFFICIENT_LIQUIDITY');
+        require(amount0Out < _reserve0 && amount1Out < _reserve1, 'ChaingeDex: INSUFFICIENT_LIQUIDITY');
 
         uint balance0;
         uint balance1;
         { // scope for _token{0,1}, avoids stack too deep errors
-        address _token0 = token0._address;
-        address _token1 = token1._address;
-        require(to != _token0 && to != _token1, 'UniswapV2: INVALID_TO');
-        if (amount0Out > 0) _safeTransfer(_token0, to, amount0Out, token0.tokenStart, token0.tokenEnd); // optimistically transfer tokens
-        if (amount1Out > 0) _safeTransfer(_token1, to, amount1Out, token1.tokenStart, token1.tokenEnd); // optimistically transfer tokens
-        if (data.length > 0) IUniswapV2Callee(to).uniswapV2Call(msg.sender, amount0Out, amount1Out, data);
+            address _token0 = token0._address;
+            address _token1 = token1._address;
+            require(to != _token0 && to != _token1, 'ChaingeDex: INVALID_TO');
+            if (amount0Out > 0) _safeTransfer(_token0, to, amount0Out, token0.tokenStart, token0.tokenEnd); // optimistically transfer tokens
+            if (amount1Out > 0) _safeTransfer(_token1, to, amount1Out, token1.tokenStart, token1.tokenEnd); // optimistically transfer tokens
+            if (data.length > 0) IUniswapV2Callee(to).uniswapV2Call(msg.sender, amount0Out, amount1Out, data);
 
-        balance0 = IFRC758(_token0).timeBalanceOf(address(this), token0.tokenStart, token0.tokenEnd);
-        balance1 = IFRC758(_token1).timeBalanceOf(address(this), token1.tokenStart, token1.tokenEnd);
-
+            balance0 = IFRC758(_token0).timeBalanceOf(address(this), token0.tokenStart, token0.tokenEnd);
+            balance1 = IFRC758(_token1).timeBalanceOf(address(this), token1.tokenStart, token1.tokenEnd);
         }
 
         uint amount0In = balance0 > _reserve0 - amount0Out ? balance0 - (_reserve0 - amount0Out) : 0;
         uint amount1In = balance1 > _reserve1 - amount1Out ? balance1 - (_reserve1 - amount1Out) : 0;
-        require(amount0In > 0 || amount1In > 0, 'UniswapV2: INSUFFICIENT_INPUT_AMOUNT');
+        require(amount0In > 0 || amount1In > 0, 'ChaingeDex: INSUFFICIENT_INPUT_AMOUNT');
         { // scope for reserve{0,1}Adjusted, avoids stack too deep errors
 
         uint balance0Adjusted = balance0.mul(1000).sub(amount0In.mul(3));
         uint balance1Adjusted = balance1.mul(1000).sub(amount1In.mul(3));
-        require(balance0Adjusted.mul(balance1Adjusted) >= uint(_reserve0).mul(_reserve1).mul(1000**2), 'UniswapV2: K');
+        require(balance0Adjusted.mul(balance1Adjusted) >= uint(_reserve0).mul(_reserve1).mul(1000**2), 'ChaingeDex: K');
         }
 
         _update(balance0, balance1, _reserve0, _reserve1);
@@ -210,14 +209,14 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
 
     // force balances to match reserves
     function skim(address to) external lock {
-        // SlicedToken memory _token0 = token0; // gas savings
-        // SlicedToken memory _token1 = token1; // gas savings
-        // _safeTransfer(_token0, to, IERC20(_token0._address).balanceOf(address(this)).sub(reserve0));
-        // _safeTransfer(_token1, to, IERC20(_token1._address).balanceOf(address(this)).sub(reserve1));
+        address _token0 = token0._address; // gas savings
+        address _token1 = token1._address; // gas savings
+        _safeTransfer(_token0, to, IFRC758(_token0).timeBalanceOf(address(this), token0.tokenStart, token0.tokenEnd).sub(reserve0), token0.tokenStart, token0.tokenEnd);
+        _safeTransfer(_token1, to, IFRC758(_token1).timeBalanceOf(address(this), token0.tokenStart, token0.tokenEnd).sub(reserve1), token0.tokenStart, token0.tokenEnd);
     }
 
     // force reserves to match balances
     function sync() external lock {
-        // _update(IERC20(token0).balanceOf(address(this)), IERC20(token1).balanceOf(address(this)), reserve0, reserve1);
+        _update(IFRC758(token0._address).timeBalanceOf(address(this), token0.tokenStart, token0.tokenEnd), IFRC758(token1._address).timeBalanceOf(address(this), token0.tokenStart, token0.tokenEnd), reserve0, reserve1);
     }
 }
