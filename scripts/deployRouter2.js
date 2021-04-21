@@ -56,53 +56,52 @@ const utils = require('./utils/utils');
 // }
 
 
+
 async function main() {
     const [forLiquidity, forSwap] = await hre.ethers.getSigners();
-    console.log('\x1B[32m%s\x1B[40m', '-------------- Start --------------')
     const amountA = utils.addZero(1, 18);
     const amountB = utils.addZero(35, 17);
     const timer = parseInt(Date.now() / 1000)
-    let { tokenA, tokenB } = await utils.mint(
-        forLiquidity,
-        forSwap,
-        utils,
-        {
-            startTime: timer,
-            endTime: 666666666666,
-            amountA,
-            amountB,
-            // 流动性充的量
-            amountADesired: utils.addZero(1, 12),
-            amountBDesired: utils.addZero(4, 12),
-            // 下面两两比例相同
-            amountAMin: utils.addZero(1, 12),
-            amountBMin: utils.addZero(4, 12),
-            amountOut: utils.addZero(1, 12),
-            amountInMax: utils.addZero(4, 12),
-            // removeLiquidity
-            liquidity: utils.addZero(1, 12),
-            amountAMin: 0,
-            amountBMin: 0
-        }
-    )
-    // x*y=k
-    //  
-    const balanceA = await utils._checkBalance([timer, 666666666666], forSwap, tokenA)
-    const balanceB = await utils._checkBalance([timer, 666666666666], forSwap, tokenB)
-    const balanceC = await utils._checkBalance([timer, 666666666666], forLiquidity, tokenA)
-    const balanceD = await utils._checkBalance([timer, 666666666666], forLiquidity, tokenB)
+    const config = {
+        startTime: 0,
+        endTime: 666666666666,
+        amountA,
+        amountB,
+        // 流动性充的量
+        amountADesired: utils.addZero(1, 12),
+        amountBDesired: utils.addZero(4, 12),
+        // 下面两两比例相同
+        amountAMin: utils.addZero(1, 12),
+        amountBMin: utils.addZero(4, 12),
+        amountOut: utils.addZero(1, 12),
+        amountInMax: utils.addZero(4, 12),
+        // removeLiquidity
+        liquidity: utils.addZero(1, 12),
+        amountAMin: 0,
+        amountBMin: 0
+    }
 
-    // const swap_k = (amountA - balanceC) * (amountB - balanceD)
+    const { tokenA, tokenB } = await utils.mint(forLiquidity, forSwap, utils, config)
+    await sleep()
+    const { uniswapV2Factory } = await utils.factory(forLiquidity)
+    await sleep()
+    const pair = await utils.createPair(uniswapV2Factory, tokenA, tokenB, config)
+    await sleep()
+    const uniRouter = await utils.router(uniswapV2Factory.address, tokenA.address)
+    await sleep()
+    await utils.approve(uniRouter.address, tokenA, tokenB)
+    await utils.checkBalance(forLiquidity, tokenA, tokenB, config)
+    await sleep()
 
-    // console.log('---------- mint后 ----------')
-    // console.log('TokenA: ', amountA)
-    // console.log('TokenB: ', amountB)
-    // console.log('TokenA: ', balanceC)
-    // console.log('TokenB: ', balanceD)
+    const res = await utils.addLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, config)
+    await utils.checkBalance(forLiquidity, tokenA, tokenB, config)
+    await sleep()
+    await utils.removeLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, config)
+    await utils.checkBalance(forLiquidity, tokenA, tokenB)
+    await sleep()
+    await utils.swap(forLiquidity, uniRouter, tokenA.address, tokenB.address, config)
+    await utils.checkBalance(forLiquidity, tokenA, tokenB, config)
 
-    // console.log('-------------- swap --------------')
-    console.log('\x1B[32m%s\x1B[0m', '-------------- End --------------')
-    return { balanceA, balanceB }
 }
 
 // We recommend this pattern to be able to use async/await everywhere
@@ -116,4 +115,11 @@ main()
 
 
 
+async function sleep() {
+    return new Promise(function (res, rej) {
+        setTimeout(() => {
+            res()
+        }, 0)
+    })
+}
 module.exports.main = main

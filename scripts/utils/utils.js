@@ -11,7 +11,6 @@ async function sleep() {
 }
 
 module.exports.mint = async (forLiquidity, forSwap, utils, params) => {
-    const { startTime, endTime, amountA, amountB, amountADesired, amountBDesired, amountAMin, amountBMin, amountOut, amountInMax } = params;
     // signer发合约的地址
     console.log('\x1B[37m', 'forLiquidity:', forLiquidity.address)
     console.log('forSwap:', forSwap.address)
@@ -22,18 +21,23 @@ module.exports.mint = async (forLiquidity, forSwap, utils, params) => {
     const mint2 = await tokenB.timeBalanceOf(forLiquidity.address, params.startTime, params.endTime); // startTime 必须大于当前时间
 
     console.log('-------------- frc758 --------------')
+    return { tokenA, tokenB }
+}
+
+module.exports.autoInit = async (forLiquidity, forSwap, utils, params) => {
+    const { tokenA, tokenB } = await utils.mint(forLiquidity, forSwap, utils, params)
 
     await sleep()
     const { uniswapV2Factory } = await utils.factory(forLiquidity)
 
     const pair = await utils.createPair(uniswapV2Factory, tokenA, tokenB, params)
+
     await sleep()
     const uniRouter = await utils.router(uniswapV2Factory.address, tokenA.address)
 
     await sleep()
     await utils.approve(uniRouter.address, tokenA, tokenB)
 
-    console.log('-------------- addLiquidity --------------')
     await sleep()
 
     const res = await utils.addLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, params)
@@ -44,10 +48,7 @@ module.exports.mint = async (forLiquidity, forSwap, utils, params) => {
     const bal2 = await tokenB.timeBalanceOf(forLiquidity.address, params.startTime, params.endTime); // startTime 必须大于当前时间
     console.log('tokenB balance', parseInt(bal2._hex));
 
-    console.log('-------------- addLiquidity --------------')
 
-    // console.log('-------------- swap --------------')
-    console.log('-------------- removeLiquidity --------------')
     await sleep()
     // await utils.swap(forSwap, uniRouter, tokenA.address, tokenB.address, params)
     await utils.removeLiquidity(forSwap, uniRouter, tokenA.address, tokenB.address, params)
@@ -56,7 +57,6 @@ module.exports.mint = async (forLiquidity, forSwap, utils, params) => {
 
     const bal4 = await tokenB.timeBalanceOf(forSwap.address, params.startTime, params.endTime); // startTime 必须大于当前时间
     console.log('tokenB balance', parseInt(bal4._hex));
-    console.log('-------------- removeLiquidity --------------')
 
 
     console.log('-------------- remove后 --------------')
@@ -124,11 +124,9 @@ module.exports.depErc20 = async () => {
 }
 
 module.exports.factory = async (signers) => {
-    // console.log('start uniswapV2Factory')
-    const UniswapV2Factory = await hre.ethers.getContractFactory("UniswapV2Factory");
+    const UniswapV2Factory = await hre.ethers.getContractFactory("ChaingeDexFactory");
     const uniswapV2Factory = await UniswapV2Factory.deploy(signers.address);
     await uniswapV2Factory.deployed();
-    // console.log('end uniswapV2Factory')
     await sleep()
     return {
         uniswapV2Factory: uniswapV2Factory
@@ -146,9 +144,7 @@ module.exports.createPair = async (factory, tokenA, tokenB, config) => {
 module.exports.router = async (factory, weth) => {
     // 路由合约
     const Router = await hre.ethers.getContractFactory("ChaingeSwap");
-
-    const uniRouter = await Router.deploy(factory, weth);
-
+    const uniRouter = await Router.deploy(factory);
     await uniRouter.deployed();
     console.log("Greeter deployed to:", uniRouter.address);
     return uniRouter
@@ -166,7 +162,8 @@ module.exports.approve = async (routerAddress, tokenA, tokenB) => {
 }
 
 module.exports.addLiquidity = async (signers, uniRouter, addressA, addressB, config) => {
-    return await uniRouter.addLiquidity(
+    console.log('-------------- addLiquidity --------------')
+    const res = await uniRouter.addLiquidity(
         addressA,
         addressB,
         config.amountADesired,
@@ -177,10 +174,13 @@ module.exports.addLiquidity = async (signers, uniRouter, addressA, addressB, con
         9999999999999,
         [config.startTime, config.endTime, config.startTime, config.endTime]
     )
+    console.log('-------------- addLiquidity --------------')
+    return res
 }
 
 module.exports.removeLiquidity = async (signers, uniRoute, addressA, addressB, config) => {
-    await uniRoute.removeLiquidity(
+    console.log('-------------- removeLiquidity --------------')
+    const res = await uniRoute.removeLiquidity(
         addressA,
         addressB,
         config.liquidity,
@@ -188,11 +188,14 @@ module.exports.removeLiquidity = async (signers, uniRoute, addressA, addressB, c
         config.amountBMin,
         signers.address,
         9999999999999,
-        [config.startTime + 500, config.endTime, config.startTime + 500, config.endTime]
+        [config.startTime, config.endTime, config.startTime, config.endTime]
     )
+    console.log('-------------- removeLiquidity --------------')
+    return res
 }
 
 module.exports.swap = async (signers, uniRouter, addressA, addressB, config) => {
+    console.log('-------------- swap --------------')
     const swapResult = await uniRouter.swapTokensForExactTokens(
         config.amountOut,
         config.amountInMax,
@@ -201,13 +204,15 @@ module.exports.swap = async (signers, uniRouter, addressA, addressB, config) => 
         999999999999,
         [config.startTime, config.endTime]
     )
+    console.log('-------------- swap --------------')
+    return swapResult
 }
 
-module.exports.checkBalance = async function checkBalance(timer = config.checkTImer, signers, tokenA, tokenB) {
+module.exports.checkBalance = async function checkBalance(signers, tokenA, tokenB, config) {
     const balanceA = await tokenA.timeBalanceOf(signers.address, config.startTime, config.endTime)
     const balanceB = await tokenB.timeBalanceOf(signers.address, config.startTime, config.endTime)
 
-    console.log('swap之后A 和 B ', parseInt(balanceA._hex), parseInt(balanceA._hex).length, parseInt(balanceB._hex), parseInt(balanceB._hex).length);
+    console.log('A:', parseInt(balanceA._hex), 'B:', parseInt(balanceB._hex));
     return [parseInt(balanceA._hex), parseInt(balanceB._hex)].toString()
 }
 
@@ -217,5 +222,6 @@ module.exports.addZero = (_p, _l) => {
 
 module.exports._checkBalance = async (timer = config.checkTImer, signers, token) => {
     const balance = await token.timeBalanceOf(signers.address, timer[0], timer[1])
+    console.log(signers)
     return parseInt(balance._hex)
 }
