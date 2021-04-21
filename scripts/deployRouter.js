@@ -59,10 +59,11 @@ async function main() {
   const bal2 = await tokenB.timeBalanceOf(signers.address, now, 666666666666); // startTime 必须大于当前时间
   console.log(' addLiquidity 之后  tokenB balance', parseInt(bal2._hex));
 
-  // await sleep()
-  // await swap(uniRouter, tokenA.address, tokenB.address)
+  await sleep()
+  await swap(uniRouter, tokenA.address, tokenB.address)
 
-  // await checkBalance(tokenA, tokenB)
+  await checkBalance(tokenA, tokenB)
+
   await sleep()
   await removeLiquidity(uniRouter, tokenA.address, tokenB.address, 1111111, 1000002507520, 3999990000128)
   await checkBalance(tokenA, tokenB)
@@ -230,7 +231,7 @@ async function swap(uniRouter, addressA, addressB) {
     [addressA, addressB],
     signers.address,
     999999999999,
-    [now, 666666666666]
+    [1619395996, 666666666666, 1619395996, 666666666666]
   )
     console.log('完成了swap');
 }
