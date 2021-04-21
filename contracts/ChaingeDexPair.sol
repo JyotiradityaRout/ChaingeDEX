@@ -124,8 +124,6 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
         uint256 balance0 = IFRC758(token0._address).timeBalanceOf(address(this), time[0], time[1]);
         uint256 balance1 = IFRC758(token1._address).timeBalanceOf(address(this), time[2], time[3]);
-        // // uint256 balance0 = IERC20(token0).balanceOf(address(this));
-        // // uint256 balance1 = IERC20(token1).balanceOf(address(this));
         uint amount0 = balance0.sub(_reserve0);
         uint amount1 = balance1.sub(_reserve1);
 
@@ -150,19 +148,9 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
         address _token0 = token0._address;
         address _token1 = token1._address;                             // gas savings
-        // uint balance0 = IERC20(_token0).balanceOf(address(this));
-        // uint balance1 = IERC20(_token1).balanceOf(address(this));
         uint256 balance0 = IFRC758(token0._address).timeBalanceOf(address(this), time[0], time[1]);
         uint256 balance1 = IFRC758(token1._address).timeBalanceOf(address(this), time[2], time[3]);
-        // uint liquidity = balanceOf[address(this)];
          uint liquidity = timeBalanceOf(address(this), time[0], time[1]);
-
-        // console.log('_address:',token0._address, token1._address);
-        // console.log( time[0], time[1]);
-        // console.log( time[2], time[3]);
-        // console.log('balance:',balance0, balance1);
-        // console.log('liquidity' , address(this), liquidity, totalSupply);
-        //     console.log('time:',time[0], time[1]);
         bool feeOn = _mintFee(_reserve0, _reserve1);
         uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
        

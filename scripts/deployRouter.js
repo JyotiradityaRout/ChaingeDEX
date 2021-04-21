@@ -162,7 +162,7 @@ async function router (factory, weth) {
   // 路由合约
   const Router = await hre.ethers.getContractFactory("ChaingeSwap");
 
-  const uniRouter = await Router.deploy(factory, weth);
+  const uniRouter = await Router.deploy(factory);
 
   await uniRouter.deployed();
   console.log("路由合约地址:", uniRouter.address);
@@ -192,7 +192,7 @@ async function addLiquidity(uniRouter, addressA, addressB) {
     "4000000000000",
     signers.address,
     9999999999999,
-    [now, 666666666666,now,666666666666]
+    [1619395996, 666666666666,1619395996,666666666666]
   )
   console.log('addLiquidity 完成');
   return res;
@@ -218,7 +218,7 @@ async function removeLiquidity(uniRoute, addressA, addressB, liquidity, amountAM
     "399999999000",
     signers.address,
     9999999999999,
-    [now, 666666666666, now, 666666666666]
+    [1619395996, 666666666666, 1619395996, 666666666666]
   )
   console.log('removeLiquidity success')
 }

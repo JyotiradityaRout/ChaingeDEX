@@ -429,17 +429,21 @@ abstract contract FRC758 is IFRC758 {
                 continue;
             }
             if(st.amount > currSt.amount) {
+                console.log('amount');
                 revert();
             }
 
             if (currSt.tokenStart >= st.tokenEnd) { 
+                   console.log('currSt.tokenStart >= st.tokenEnd)');
                  revert();
             }
             if(currSt.next == 0 && currSt.tokenEnd < st.tokenEnd) { 
+                         console.log('currSt.next == 0 && currSt.tokenEnd < st.tokenEnd');
                  revert();
             }
 
             if(currSt.tokenStart < st.tokenEnd && currSt.tokenStart > st.tokenStart) { 
+                console.log('currSt.tokenStart < st.tokenEnd && currSt.tokenStart > st.tokenStart');
                 revert();
             }
 

@@ -31,15 +31,9 @@ contract ChaingeDexFRC758 {
         uint256 tokenEnd; //token end blockNumber or timestamp, use MAX_UINT for timestamp, MAX_BLOCKNUMBER for blockNumber.
         uint256 next;
     }
-        // Mapping from owner to a map of SlicedToken
     mapping (address => mapping (uint256 => SlicedToken)) internal balances;
-    
-    // Mapping from owner to number of SlicedToken struct（record length of balances）
     mapping (address => uint256) internal ownedSlicedTokensCount;
-
-    // Mapping from owner to operator approvals
     mapping (address => mapping (address => bool)) internal operatorApprovals;
-
     mapping (address => uint256 ) headerIndex;
     
     constructor() public {
