@@ -70,13 +70,15 @@ async function main() {
         // 流动性充的量
         amountADesired: utils.addZero(1, 12),
         amountBDesired: utils.addZero(4, 12),
-        // 下面两两比例相同
+        // addLiquidity swap两两比例相同
+        // addLiquidity
         amountAMin: utils.addZero(1, 12),
         amountBMin: utils.addZero(4, 12),
+        // swap
         amountOut: utils.addZero(1, 12),
         amountInMax: utils.addZero(4, 12),
         // removeLiquidity
-        liquidity: utils.addZero(1, 10),
+        liquidity: utils.addZero(1, 12),
         amountAMin: 0,
         amountBMin: 0
     }
@@ -90,17 +92,35 @@ async function main() {
     const uniRouter = await utils.router(uniswapV2Factory.address, tokenA.address)
     await sleep()
     await utils.approve(uniRouter.address, tokenA, tokenB)
-    await utils.checkBalance(forLiquidity, tokenA, tokenB, config)
+    const afterMint = await utils.checkBalance(forLiquidity, tokenA, tokenB, config)
     await sleep()
 
     const res = await utils.addLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, config)
-    await utils.checkBalance(forLiquidity, tokenA, tokenB, config)
+    const afterAddLiquidity = await utils.checkBalance(forLiquidity, tokenA, tokenB, config)
     await sleep()
+
+    const deltaA = afterMint[0] - afterAddLiquidity[0]
+    const deltaB = afterMint[1] - afterAddLiquidity[1]
+    const k = (deltaA) * (deltaB)
+    console.log(`TokenA充了: ${deltaA}`)
+    console.log(`TokenB充了: ${deltaB}`)
+    console.log(`k: ${k}`)
+
+
     await utils.removeLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, config)
-    await utils.checkBalance(forLiquidity, tokenA, tokenB, config)
-    await sleep()
+    const afterRemoveLiquidity = await utils.checkBalance(forLiquidity, tokenA, tokenB, config)
+    const removeDeltaA = afterRemoveLiquidity[0] - afterAddLiquidity[0]
+    const removeDeltaB = afterRemoveLiquidity[1] - afterAddLiquidity[1]
+    console.log(`TokenA退了: ${removeDeltaA}`)
+    console.log(`TokenB退了: ${removeDeltaB}`)
+    console.log(`k: ${removeDeltaA * removeDeltaB}`)
+
+
+    // await sleep()
     // await utils.swap(forSwap, uniRouter, tokenA.address, tokenB.address, config)
-    // await utils.checkBalance(forSwap, tokenA, tokenB, config)
+    // const afterSwap = await utils.checkBalance(forSwap, tokenA, tokenB, config)
+    // console.log(`swap后，tokenA的理论值：${k / (deltaB)}`)
+    // console.log(`result：${k / (deltaB) === deltaA}`)
 
 }
 

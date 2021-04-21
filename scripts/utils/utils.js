@@ -201,7 +201,7 @@ module.exports.swap = async (signers, uniRouter, addressA, addressB, config) => 
         [addressA, addressB],
         signers.address,
         999999999999,
-        [config.startTime, config.endTime]
+        [config.startTime, config.endTime, config.startTime, config.endTime]
     )
     console.log('-------------- swap --------------')
     return swapResult
@@ -212,7 +212,7 @@ module.exports.checkBalance = async function checkBalance(signers, tokenA, token
     const balanceB = await tokenB.timeBalanceOf(signers.address, config.startTime, config.endTime)
 
     console.log('A:', parseInt(balanceA._hex), 'B:', parseInt(balanceB._hex));
-    return [parseInt(balanceA._hex), parseInt(balanceB._hex)].toString()
+    return [parseInt(balanceA._hex), parseInt(balanceB._hex)]
 }
 
 module.exports.addZero = (_p, _l) => {
