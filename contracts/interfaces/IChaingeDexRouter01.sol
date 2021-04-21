@@ -1,12 +1,5 @@
 pragma solidity >=0.6.2;
 
-struct SlicedToken {
-    address token;
-    uint256 amount; //token amount
-    uint256 tokenStart; //token start blockNumber or timestamp (in secs from unix epoch)
-    uint256 tokenEnd; //token end blockNumber or timestamp, use MAX_UINT for timestamp, MAX_BLOCKNUMBER for blockNumber.
-}
-
 interface IChaingeDexRouter01 {
     function factory() external pure returns (address);
     function addLiquidity(

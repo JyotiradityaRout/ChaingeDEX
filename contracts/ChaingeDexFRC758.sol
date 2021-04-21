@@ -4,16 +4,13 @@ import '@uniswap/v2-core/contracts/libraries/SafeMath.sol';
 import "@nomiclabs/buidler/console.sol";
 
 contract ChaingeDexFRC758 {
-    
     using SafeMath for uint;
-
-    string public constant name = 'Uniswap V2';
-    string public constant symbol = 'UNI-V2';
+    string public constant name = 'ChaingeDex';
+    string public constant symbol = 'ChaingeDex';
     uint8 public constant decimals = 18;
     uint  public totalSupply;
     // mapping(address => uint) public balanceOf;
     mapping(address => mapping(address => uint)) public allowance;
-
     bytes32 public DOMAIN_SEPARATOR;
     // keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
     bytes32 public constant PERMIT_TYPEHASH = 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9;
@@ -52,7 +49,7 @@ contract ChaingeDexFRC758 {
 
     function _mint(address to, uint value) internal {
          totalSupply = totalSupply.add(value);
-           console.log('_mint', to, value, block.timestamp);
+        // console.log('_mint', to, value, block.timestamp);
          _mint(to, value, block.timestamp, MAX_TIME);
         emit Transfer(address(0), to, value);
     }
@@ -126,12 +123,6 @@ contract ChaingeDexFRC758 {
     function _validateAmount(uint256 amount) internal pure {
         require(amount > 0, "invalid amount");
     }
-
-    // function totalSupply() public view returns (uint256) {
-    //     return _totalSupply;
-    // }
-    
-    //validate tokenStart and tokenEnd
     function _validateTokenStartAndEnd(uint256 tokenStart, uint256 tokenEnd) internal view {
         require(tokenEnd >= tokenStart, "tokenStart greater than tokenEnd");
         require((tokenEnd >= block.timestamp), "blockEnd less than current timestamp");
