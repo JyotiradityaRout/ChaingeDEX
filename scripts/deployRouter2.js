@@ -60,10 +60,10 @@ const utils = require('./utils/utils');
 async function main() {
     const [forLiquidity, forSwap] = await hre.ethers.getSigners();
     const amountA = utils.addZero(1, 18);
-    const amountB = utils.addZero(35, 17);
+    const amountB = utils.addZero(45, 17);
     const timer = parseInt(Date.now() / 1000)
     const config = {
-        startTime: 0,
+        startTime: 1619395996,
         endTime: 666666666666,
         amountA,
         amountB,
@@ -76,7 +76,7 @@ async function main() {
         amountOut: utils.addZero(1, 12),
         amountInMax: utils.addZero(4, 12),
         // removeLiquidity
-        liquidity: utils.addZero(1, 12),
+        liquidity: utils.addZero(1, 10),
         amountAMin: 0,
         amountBMin: 0
     }
@@ -97,10 +97,10 @@ async function main() {
     await utils.checkBalance(forLiquidity, tokenA, tokenB, config)
     await sleep()
     await utils.removeLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, config)
-    await utils.checkBalance(forLiquidity, tokenA, tokenB)
-    await sleep()
-    await utils.swap(forLiquidity, uniRouter, tokenA.address, tokenB.address, config)
     await utils.checkBalance(forLiquidity, tokenA, tokenB, config)
+    await sleep()
+    // await utils.swap(forSwap, uniRouter, tokenA.address, tokenB.address, config)
+    // await utils.checkBalance(forSwap, tokenA, tokenB, config)
 
 }
 

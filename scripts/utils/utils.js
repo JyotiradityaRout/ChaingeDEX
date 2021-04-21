@@ -1,4 +1,3 @@
-const config = require("../config");
 const hre = require("hardhat");
 const { utils } = require("ethers");
 
