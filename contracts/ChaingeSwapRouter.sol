@@ -30,15 +30,7 @@ interface IFRC758 {
 library ChaingeDexLibrary {
     using SafeMath for uint;
     function pairFor(address factory, address tokenA, address tokenB, uint256[] memory time) internal view returns (address pair) {
-        // (address token0, address token1) = sortTokens(tokenA, tokenB);
-        // pair = address(uint(keccak256(abi.encodePacked(
-        //         hex'ff',
-        //         factory,
-        //         keccak256(abi.encodePacked(token0, token1)),
-        //         hex'96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f' // init code hash
-        //     ))));
          (address token0, address token1) = (tokenA, tokenB);
-
         pair = IChaingeDexFactory(factory).getPair(tokenA, tokenB, time);
     }
     // returns sorted token addresses, used to handle return values from pairs sorted in this order
@@ -50,6 +42,11 @@ library ChaingeDexLibrary {
         // fetches and sorts the reserves for a pair
     function getReserves(address factory, address tokenA, address tokenB, uint256[] memory time) internal view returns (uint reserveA, uint reserveB) {
         (address token0,) = sortTokens(tokenA, tokenB);
+        // address pair = pairFor(factory, tokenA, tokenB, time);
+
+        // console.log(pair);
+        // console.log(time.length);
+
         (uint reserve0, uint reserve1,) = IChaingeDexPair(pairFor(factory, tokenA, tokenB, time)).getReserves();
         (reserveA, reserveB) = tokenA == token0 ? (reserve0, reserve1) : (reserve1, reserve0);
     }
@@ -65,7 +62,7 @@ library ChaingeDexLibrary {
     function getAmountOut(uint amountIn, uint reserveIn, uint reserveOut) internal pure returns (uint amountOut) {
         require(amountIn > 0, 'ChaingeDexLibrary: INSUFFICIENT_INPUT_AMOUNT');
         require(reserveIn > 0 && reserveOut > 0, 'ChaingeDexLibrary: INSUFFICIENT_LIQUIDITY');
-        uint amountInWithFee = amountIn.mul(997);
+        uint amountInWithFee = amountIn.mul(998);
         uint numerator = amountInWithFee.mul(reserveOut);
         uint denominator = reserveIn.mul(1000).add(amountInWithFee);
         amountOut = numerator / denominator;
@@ -76,7 +73,7 @@ library ChaingeDexLibrary {
         require(amountOut > 0, 'ChaingeDexLibrary: INSUFFICIENT_OUTPUT_AMOUNT');
         require(reserveIn > 0 && reserveOut > 0, 'UniswapV2Library: INSUFFICIENT_LIQUIDITY');
         uint numerator = reserveIn.mul(amountOut).mul(1000);
-        uint denominator = reserveOut.sub(amountOut).mul(997);
+        uint denominator = reserveOut.sub(amountOut).mul(998);
         amountIn = (numerator / denominator).add(1);
     }
 
@@ -116,7 +113,6 @@ contract ChaingeSwap is IChaingeDexRouter01 {
     }
 
     receive() external payable {
-        // assert(msg.sender == WETH); // only accept ETH via fallback from the WETH contract
     }
 
     function getReserves(address factory, address tokenA, address tokenB, uint256[] memory time) internal view returns (uint reserveA, uint reserveB) {
@@ -139,7 +135,7 @@ contract ChaingeSwap is IChaingeDexRouter01 {
     ) internal virtual returns (uint256 amountA, uint256 amountB) {
         // create the pair if it doesn't exist yet
         if (IChaingeDexFactory(factory).getPair(tokenA, tokenB, time) == address(0)) {
-            // IUniswapV2Factory(factory).createPair(tokenA, tokenB);    // TODO: 这里后面要改成报错，不允许没有创建交易对就来交易
+            revert();
         }
         (uint256 reserveA, uint256 reserveB) = getReserves(factory, tokenA, tokenB, time);
         if (reserveA == 0 && reserveB == 0) {
@@ -169,7 +165,6 @@ contract ChaingeSwap is IChaingeDexRouter01 {
         uint256 deadline,
         uint256[] memory time
     ) public virtual override ensure(deadline) returns (uint256 amountA, uint256 amountB, uint256 liquidity) {
-        console.log('addLiquidity', time[0]);
         (amountA, amountB) = _addLiquidity(tokenA, tokenB, amountADesired, amountBDesired, amountAMin, amountBMin, time);
         liquidity = _addLiquidityByTimeSliceToken(
             tokenA,
@@ -190,8 +185,6 @@ contract ChaingeSwap is IChaingeDexRouter01 {
             uint256[] memory time
     ) internal returns(uint liquidity) {
         address pair = IChaingeDexFactory(factory).getPair(tokenA, tokenB, time);
-        console.log( tokenA,tokenB, amountA, amountB );
-        console.log('router pair', pair);
         TransferHelper.safeTransferFrom(tokenA, msg.sender, pair, amountA, time[0], time[1]);
         TransferHelper.safeTransferFrom(tokenB, msg.sender, pair, amountB, time[2], time[3]);
         liquidity = IChaingeDexPair(pair).mint(to, time);
@@ -208,21 +201,12 @@ contract ChaingeSwap is IChaingeDexRouter01 {
     ) public virtual override ensure(deadline) returns (uint amountA, uint amountB) {
         address pair = IChaingeDexFactory(factory).getPair(tokenA, tokenB, time);
         IChaingeDexPair(pair).transferFrom(msg.sender, pair, liquidity); // send liquidity to pair
-         console.log("liquidity send success to pair");
         (uint amount0, uint amount1) = IChaingeDexPair(pair).burn(to, time);
-        // (address token0,) = UniswapV2Library.sortTokens(tokenA, tokenB);
-        // (amountA, amountB) = tokenA == token0 ? (amount0, amount1) : (amount1, amount0);
         (amountA, amountB) = (amount0, amount1);
         require(amountA >= amountAMin, 'ChaingeDexRouter: INSUFFICIENT_A_AMOUNT');
         require(amountB >= amountBMin, 'ChaingeDexRouter: INSUFFICIENT_B_AMOUNT');
     }
 
-    function removeLiquidityWithPermit(address tokenA, address tokenB, uint liquidity, uint amountAMin,uint amountBMin, address to,uint deadline, bool approveMax, uint8 v, bytes32 r, bytes32 s ) external virtual override returns (uint amountA, uint amountB) {
-        // address pair = UniswapV2Library.pairFor(factory, tokenA, tokenB);
-        // uint value = approveMax ? uint(-1) : liquidity;
-        // IUniswapV2Pair(pair).permit(msg.sender, address(this), value, deadline, v, r, s);
-        // (amountA, amountB) = removeLiquidity(tokenA, tokenB, liquidity, amountAMin, amountBMin, to, deadline);
-    }
     function _swap(uint[] memory amounts, address[] memory path, address _to, uint256[] memory time) internal virtual {
         for (uint i; i < path.length - 1; i++) {
             (address input, address output) = (path[i], path[i + 1]);
@@ -259,7 +243,6 @@ contract ChaingeSwap is IChaingeDexRouter01 {
         uint256[] calldata time
     ) external virtual override ensure(deadline) returns (uint[] memory amounts) {
         amounts = ChaingeDexLibrary.getAmountsIn(factory, amountOut, path, time);
-        console.log(amounts[0], amountInMax);
         require(amounts[0] <= amountInMax, 'ChaingeDexRouter: EXCESSIVE_INPUT_AMOUNT');
         TransferHelper.safeTransferFrom(
             path[0], msg.sender, ChaingeDexLibrary.pairFor(factory, path[0], path[1], time), amounts[0], time[0], time[1]

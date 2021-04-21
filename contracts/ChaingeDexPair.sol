@@ -150,24 +150,17 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
         address _token1 = token1._address;                             // gas savings
         uint256 balance0 = IFRC758(token0._address).timeBalanceOf(address(this), time[0], time[1]);
         uint256 balance1 = IFRC758(token1._address).timeBalanceOf(address(this), time[2], time[3]);
-         uint liquidity = timeBalanceOf(address(this), time[0], time[1]);
+        uint liquidity = timeBalanceOf(address(this), time[0], time[1]);
         bool feeOn = _mintFee(_reserve0, _reserve1);
         uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
-       
-        
         amount0 = liquidity.mul(balance0) / _totalSupply; // using balances ensures pro-rata distribution
         amount1 = liquidity.mul(balance1) / _totalSupply; // using balances ensures pro-rata distribution
-        console.log(amount0, amount1);
         require(amount0 > 0 && amount1 > 0, 'ChaingeDex: INSUFFICIENT_LIQUIDITY_BURNED');
-        // console.log('ffffffff', liquidity);
         _burn(address(this), liquidity);
-          console.log('abv');
         _safeTransfer(_token0, to, amount0, token0.tokenStart, token0.tokenEnd);
-            console.log('ert');
         _safeTransfer(_token1, to, amount1, token1.tokenStart, token1.tokenEnd);
         balance0 = IFRC758(_token0).timeBalanceOf(address(this), token0.tokenStart, token0.tokenEnd);
         balance1 = IFRC758(_token1).timeBalanceOf(address(this), token1.tokenStart, token1.tokenEnd);
-        console.log('balance aft:',balance0, balance1);
         _update(balance0, balance1, _reserve0, _reserve1);
         if (feeOn) kLast = uint(reserve0).mul(reserve1); // reserve0 and reserve1 are up-to-date
         emit Burn(msg.sender, amount0, amount1, to);
@@ -198,8 +191,8 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
         require(amount0In > 0 || amount1In > 0, 'ChaingeDex: INSUFFICIENT_INPUT_AMOUNT');
         { // scope for reserve{0,1}Adjusted, avoids stack too deep errors
 
-        uint balance0Adjusted = balance0.mul(1000).sub(amount0In.mul(3));
-        uint balance1Adjusted = balance1.mul(1000).sub(amount1In.mul(3));
+        uint balance0Adjusted = balance0.mul(1000).sub(amount0In.mul(2));
+        uint balance1Adjusted = balance1.mul(1000).sub(amount1In.mul(2));
         require(balance0Adjusted.mul(balance1Adjusted) >= uint(_reserve0).mul(_reserve1).mul(1000**2), 'ChaingeDex: K');
         }
 

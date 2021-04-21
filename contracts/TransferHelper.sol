@@ -47,9 +47,4 @@ library TransferHelper {
             'TransferHelper::transferFrom: safetransferFrom failed'
         );
     }
-
-    function safeTransferETH(address to, uint256 value) internal {
-        (bool success, ) = to.call{value: value}(new bytes(0));
-        require(success, 'TransferHelper::safeTransferETH: ETH transfer failed');
-    }
 }
