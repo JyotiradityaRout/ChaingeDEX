@@ -62,7 +62,7 @@ describe("FRC758", function () {
 
                 describe('remveLiquidity', () => {
                     it('remove', async () => {
-                        await utils.removeLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, utils.addZero(1, 12), config)
+                        await utils.removeLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, liq - 199999999000, config)
                         const afterRemoveLiquidity = await utils.checkBalance(forLiquidity, tokenA, tokenB, config)
                         const removeDeltaA = afterRemoveLiquidity[0] - afterAddLiquidity[0]
                         const removeDeltaB = afterRemoveLiquidity[1] - afterAddLiquidity[1]
