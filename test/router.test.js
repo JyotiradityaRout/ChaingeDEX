@@ -2,6 +2,13 @@ const { expect } = require("chai");
 const hre = require("hardhat");
 const utils = require('../scripts/utils/utils');
 
+async function sleep() {
+    return new Promise(function (res, rej) {
+        setTimeout(() => {
+            res()
+        }, 0)
+    })
+}
 
 describe("FRC758", async function () {
     const [forLiquidity, forSwap] = await hre.ethers.getSigners();
@@ -41,25 +48,49 @@ describe("FRC758", async function () {
     const afterMint = await utils.checkBalance(forLiquidity, tokenA, tokenB, config)
     await sleep()
 
-    const res = await utils.addLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, config)
-    const afterAddLiquidity = await utils.checkBalance(forLiquidity, tokenA, tokenB, config)
-    await sleep()
+    describe("addLiquidity", async () => {
+        const res = await utils.addLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, config)
+        const afterAddLiquidity = await utils.checkBalance(forLiquidity, tokenA, tokenB, config)
+        await sleep()
+        const deltaA = afterMint[0] - afterAddLiquidity[0]
+        const deltaB = afterMint[1] - afterAddLiquidity[1]
+        const k = (deltaA) * (deltaB)
+        // 1000是最小流通量
+        const liq = Math.sqrt(deltaA * deltaB) - 1000
+        await sleep()
 
-    const deltaA = afterMint[0] - afterAddLiquidity[0]
-    const deltaB = afterMint[1] - afterAddLiquidity[1]
-    const k = (deltaA) * (deltaB)
-    // 1000是最小流通量
-    const liq = Math.sqrt(deltaA * deltaB) - 1000
+        describe('remveLiquidity', async () => {
+            await utils.removeLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, utils.addZero(1, 12), config)
+            const afterRemoveLiquidity = await utils.checkBalance(forLiquidity, tokenA, tokenB, config)
+            const removeDeltaA = afterRemoveLiquidity[0] - afterAddLiquidity[0]
+            const removeDeltaB = afterRemoveLiquidity[1] - afterAddLiquidity[1]
+            const _k = removeDeltaA * removeDeltaB * Math.pow(deltaA / removeDeltaA, 2)
 
-    await utils.removeLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, utils.addZero(1, 12), config)
-    const afterRemoveLiquidity = await utils.checkBalance(forLiquidity, tokenA, tokenB, config)
-    const removeDeltaA = afterRemoveLiquidity[0] - afterAddLiquidity[0]
-    const removeDeltaB = afterRemoveLiquidity[1] - afterAddLiquidity[1]
-    const _k = removeDeltaA * removeDeltaB * Math.pow(deltaA / removeDeltaA, 2)
+            it('add-remove', async () => {
+                await expect(_k).to.equal(k);
 
+            })
+        })
 
-    it('liq', async () => {
-        await expect(_k).to.equal(k);
+        describe('swap', async () => {
+            await utils.swap(forSwap, uniRouter, tokenA.address, tokenB.address, config)
+            const afterSwap = await utils.checkBalance(forSwap, tokenA, tokenB, config)
+            console.log(`swap后，tokenA的理论值：${k / (deltaB)}`)
+            console.log(`result：${k / (deltaB) === deltaA}`)
+
+            it('add-swap', async () => {
+                await expect(deltaB * deltaA).to.equal(k);
+
+            })
+        })
 
     })
+
+
+
+
+
+
+
+
 })
