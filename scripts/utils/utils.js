@@ -137,7 +137,7 @@ module.exports.createPair = async (factory, tokenA, tokenB, config) => {
     // console.log('start createPair')
     const pair = await factory.createPair(tokenA.address, tokenB.address, [config.startTime, config.endTime, config.startTime, config.endTime]); // 创建个1617212453 到永远的和 1627212453 到永远的。
     // console.log('end createPair')
-    return pair
+    return factory.getPair(tokenA.address, tokenB.address, [config.startTime, config.endTime, config.startTime, config.endTime]);
 }
 
 module.exports.router = async (factory, weth) => {
@@ -230,4 +230,13 @@ module.exports.getK = async (afterRemoveLiquidity) => {
     const removeDeltaB = afterRemoveLiquidity[1] - afterAddLiquidity[1]
     const _k = removeDeltaA * removeDeltaB * Math.pow(deltaA / removeDeltaA, 2)
     return _k
+}
+
+module.exports.feeToBalance = async (pair, signersAddress, config) => {
+    // console.log('feeToAddress', feeToAddress)
+    const pairObj = await hre.ethers.getContractAt('ChaingeDexPair', pair, signersAddress)
+    // const otherBalance = await pairObj.timeBalanceOf(feeToAddress, 1619395996, 666666666666)
+    // console.log('feeToBalance ', parseInt(otherBalance._hex));
+    const signersBalance = await pairObj.timeBalanceOf(signersAddress.address, config.startTime, config.endTime)
+    return parseInt(signersBalance._hex)
 }

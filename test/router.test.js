@@ -12,7 +12,7 @@ async function sleep() {
 
 describe("FRC758", function () {
     it('mint', async () => {
-        const [forLiquidity, forSwap] = await hre.ethers.getSigners();
+        const [forLiquidity, forSwap] = await ethers.getSigners();
         const amountA = utils.addZero(1, 18);
         const amountB = utils.addZero(45, 17);
         const timer = parseInt(Date.now() / 1000)
@@ -57,9 +57,7 @@ describe("FRC758", function () {
                 const deltaA = afterMint[0] - afterAddLiquidity[0]
                 const deltaB = afterMint[1] - afterAddLiquidity[1]
                 const k = (deltaA) * (deltaB)
-                // 1000是最小流通量
-                const liq = Math.sqrt(deltaA * deltaB) - 1000
-                console.log('liq', liq)
+                const liq = await utils.feeToBalance(pair, forLiquidity, config)
                 await sleep()
 
                 describe('remveLiquidity', () => {
@@ -83,15 +81,16 @@ describe("FRC758", function () {
                 const deltaA = afterMint[0] - afterAddLiquidity[0]
                 const deltaB = afterMint[1] - afterAddLiquidity[1]
                 const k = (deltaA) * (deltaB)
-                const liq = Math.sqrt(deltaA * deltaB)
+                const liq = await utils.feeToBalance(pair, forLiquidity, config)
+
                 console.log('liq', liq)
-                
+
 
                 await sleep()
 
                 describe('remveLiquidity-2', () => {
                     it('remove-2', async () => {
-                        await utils.removeLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, liq, config)
+                        await utils.removeLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, liq-199999999000, config)
                         const afterRemoveLiquidity = await utils.checkBalance(forLiquidity, tokenA, tokenB, config)
                         const removeDeltaA = afterRemoveLiquidity[0] - afterAddLiquidity[0]
                         const removeDeltaB = afterRemoveLiquidity[1] - afterAddLiquidity[1]
