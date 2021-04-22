@@ -59,6 +59,7 @@ describe("FRC758", function () {
                 const k = (deltaA) * (deltaB)
                 // 1000是最小流通量
                 const liq = Math.sqrt(deltaA * deltaB) - 1000
+                console.log('liq', liq)
                 await sleep()
 
                 describe('remveLiquidity', () => {
@@ -71,19 +72,37 @@ describe("FRC758", function () {
                         await expect(_k).to.equal(k);
                     })
                 })
+            })
+        })
 
-                describe('swap', () => {
-                    it('swap', async () => {
-                        await utils.swap(forSwap, uniRouter, tokenA.address, tokenB.address, config)
-                        const afterSwap = await utils.checkBalance(forSwap, tokenA, tokenB, config)
-                        console.log(`swap后，tokenA的理论值：${k / (deltaB)}`)
-                        console.log(`result：${k / (deltaB) === deltaA}`)
-                        await expect(deltaB * deltaA).to.equal(k);
+        describe("addLiquidity-2", () => {
+            it('add-2', async () => {
+                const res = await utils.addLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, config)
+                const afterAddLiquidity = await utils.checkBalance(forLiquidity, tokenA, tokenB, config)
+                await sleep()
+                const deltaA = afterMint[0] - afterAddLiquidity[0]
+                const deltaB = afterMint[1] - afterAddLiquidity[1]
+                const k = (deltaA) * (deltaB)
+                const liq = Math.sqrt(deltaA * deltaB)
+                console.log('liq', liq)
+                
+
+                await sleep()
+
+                describe('remveLiquidity-2', () => {
+                    it('remove-2', async () => {
+                        await utils.removeLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, liq, config)
+                        const afterRemoveLiquidity = await utils.checkBalance(forLiquidity, tokenA, tokenB, config)
+                        const removeDeltaA = afterRemoveLiquidity[0] - afterAddLiquidity[0]
+                        const removeDeltaB = afterRemoveLiquidity[1] - afterAddLiquidity[1]
+                        const _k = removeDeltaA * removeDeltaB * Math.pow(deltaA / removeDeltaA, 2)
+                        await expect(_k).to.equal(k);
                     })
                 })
             })
 
         })
+
 
     })
 })
