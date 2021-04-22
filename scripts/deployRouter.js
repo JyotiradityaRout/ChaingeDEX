@@ -21,7 +21,7 @@ async function main() {
   // manually to make sure everything is compiled
   // await hre.run('compile');
 
- const [owner] = await hre.ethers.getSigners();
+ const [owner, other] = await hre.ethers.getSigners();
  signers.address = owner.address
 //  console.log('owner:', owner.address)
   // We get the contract to deploy
@@ -37,7 +37,7 @@ async function main() {
   const {tokenA, tokenB} = await frc758()
 
   await sleep()
-  const {uniswapV2Factory} = await factory()
+  const {uniswapV2Factory} = await factory(other.address)
 
   const pair =  await createPair(uniswapV2Factory, tokenA, tokenB)
   await sleep()
@@ -48,8 +48,6 @@ async function main() {
 
   await sleep()
   const res = await addLiquidity(uniRouter, tokenA.address, tokenB.address)
-  // console.log(res);
-  // console.log('pair',pair);
 
   const now = getNow() + 10;
 
@@ -67,6 +65,8 @@ async function main() {
   await sleep()
   await removeLiquidity(uniRouter, tokenA.address, tokenB.address, 1111111, 1000002507520, 3999990000128)
   await checkBalance(tokenA, tokenB)
+
+  await feeToBalance( pair, other.address, owner)
 }
 
 // We recommend this pattern to be able to use async/await everywhere
@@ -140,10 +140,10 @@ async function frc758() {
   }
 }
 
-async function factory() {
+async function factory(addr) {
   console.log('start ChaingeDexFactory')
   const UniswapV2Factory = await hre.ethers.getContractFactory("ChaingeDexFactory");
-  const uniswapV2Factory = await UniswapV2Factory.deploy(signers.address );
+  const uniswapV2Factory = await UniswapV2Factory.deploy(addr);
   await uniswapV2Factory.deployed();
   console.log('end uniswapV2Factory')
   await sleep()
@@ -156,7 +156,8 @@ async function createPair(factory, tokenA, tokenB) {
   console.log('start createPair')
   const pair = await factory.createPair(tokenA.address, tokenB.address, [ 1619395996,666666666666, 1619395996,666666666666]); // 创建个1617212453 到永远的和 1627212453 到永远的。
   console.log('end createPair')
-  return pair
+  return factory.getPair(tokenA.address, tokenB.address, [ 1619395996,666666666666, 1619395996,666666666666]);
+  // return pair
 }
 
 async function router (factory, weth) {
@@ -189,8 +190,8 @@ async function addLiquidity(uniRouter, addressA, addressB) {
     addressB,
     "1000000000000",
     "4000000000000",
-    "1000000000000",
-    "4000000000000",
+    "0",
+    "0",
     signers.address,
     9999999999999,
     [1619395996, 666666666666,1619395996,666666666666]
@@ -225,9 +226,10 @@ async function removeLiquidity(uniRoute, addressA, addressB, liquidity, amountAM
 }
 
 async function swap(uniRouter, addressA, addressB) {
+  console.log('开始swap');
   const swapResult = await uniRouter.swapTokensForExactTokens(
     "1000000000000",
-    "4000000000000",
+    "3000000000000",
     [addressA, addressB],
     signers.address,
     999999999999,
@@ -241,5 +243,15 @@ async function checkBalance(tokenA, tokenB) {
   const balanceA = await tokenA.timeBalanceOf(signers.address, now, 666666666666)
   const balanceB = await tokenB.timeBalanceOf(signers.address, now, 666666666666)
 
-  console.log('swap之后A 和 B ',parseInt(balanceA._hex), parseInt(balanceB._hex));
+  console.log('然后A 和 B ',parseInt(balanceA._hex), parseInt(balanceB._hex));
+}
+
+async function feeToBalance(pair ,feeToAddress, signersAddress) {
+  console.log('feeToAddress', feeToAddress)
+   const now = getNow() + 500;
+   const pairObj = await hre.ethers.getContractAt('ChaingeDexPair', pair, signersAddress)
+  //  console.log('pairObj', pairObj)
+   const otherBalance = await pairObj.timeBalanceOf(feeToAddress, now, 666666666666)
+
+   console.log('feeToBalance ',parseInt(otherBalance._hex));
 }
