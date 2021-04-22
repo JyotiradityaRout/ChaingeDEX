@@ -23,9 +23,9 @@ contract ChaingeDexFRC758 {
     event ApprovalForAll(address indexed _owner, address indexed _operator, bool _approved);
 
     struct SlicedToken {
-        uint256 amount; //token amount
-        uint256 tokenStart; //token start blockNumber or timestamp (in secs from unix epoch)
-        uint256 tokenEnd; //token end blockNumber or timestamp, use MAX_UINT for timestamp, MAX_BLOCKNUMBER for blockNumber.
+        uint256 amount; 
+        uint256 tokenStart; 
+        uint256 tokenEnd;
         uint256 next;
     }
     mapping (address => mapping (uint256 => SlicedToken)) internal balances;
@@ -49,17 +49,14 @@ contract ChaingeDexFRC758 {
 
     function _mint(address to, uint value) internal {
          totalSupply = totalSupply.add(value);
-        // console.log('_mint', to, value, block.timestamp);
-         _mint(to, value, block.timestamp, MAX_TIME);
+         _mint(to, value, 1619075045, MAX_TIME);
         emit Transfer(address(0), to, value);
     }
 
     function _burn(address from, uint value) internal {
-        // balanceOf[from] = balanceOf[from].sub(value);
-        console.log('_burn',from, value, block.timestamp);
         _burn(from, value,  block.timestamp, MAX_TIME);
         totalSupply = totalSupply.sub(value);
-        // emit Transfer(from, address(0), value);
+        emit Transfer(from, address(0), value);
     }
 
     function _approve(address owner, address spender, uint value) private {
@@ -68,11 +65,7 @@ contract ChaingeDexFRC758 {
     }
 
     function _transfer(address from, address to, uint value) private {
-        // balanceOf[from] = balanceOf[from].sub(value);
-        // balanceOf[to] = balanceOf[to].add(value);
-        // emit Transfer(from, to, value);
     }
-
     function approve(address spender, uint value) external returns (bool) {
         _approve(msg.sender, spender, value);
         return true;
@@ -82,22 +75,13 @@ contract ChaingeDexFRC758 {
         _transfer(msg.sender, to, value);
         return true;
     }
-
-    // function transferFrom(address from, address to, uint value) external returns (bool) {
-    //     if (allowance[from][msg.sender] != uint(-1)) {
-    //         allowance[from][msg.sender] = allowance[from][msg.sender].sub(value);
-    //     }
-    //     _transfer(from, to, value);
-    //     return true;
-    // }
     function transferFrom(address sender, address _receiver, uint256 amount) public returns (bool) {
         safeTransferFrom(sender, _receiver, amount, block.timestamp, MAX_TIME);
         return true;
     }
 
-
     function permit(address owner, address spender, uint value, uint deadline, uint8 v, bytes32 r, bytes32 s) external {
-        require(deadline >= block.timestamp, 'UniswapV2: EXPIRED');
+        require(deadline >= block.timestamp, 'ChaingeDex: EXPIRED');
         bytes32 digest = keccak256(
             abi.encodePacked(
                 '\x19\x01',
@@ -106,7 +90,7 @@ contract ChaingeDexFRC758 {
             )
         );
         address recoveredAddress = ecrecover(digest, v, r, s);
-        require(recoveredAddress != address(0) && recoveredAddress == owner, 'UniswapV2: INVALID_SIGNATURE');
+        require(recoveredAddress != address(0) && recoveredAddress == owner, 'ChaingeDex: INVALID_SIGNATURE');
         _approve(owner, spender, value);
     }
 
@@ -160,7 +144,6 @@ contract ChaingeDexFRC758 {
             tokenEndArray[i] = balances[from][ii].tokenEnd;
             i++;
         }
-        
         return (amountArray, tokenStartArray, tokenEndArray);
     }
 
@@ -211,10 +194,6 @@ contract ChaingeDexFRC758 {
     //the _spender is trying to spend assets from _from
     function isApprovedOrOwner(address _spender, address _from) public view returns (bool) {
         return _spender == _from || isApprovedForAll(_from, _spender);
-    }
-
-    function transfer(address _from, address _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd) public {
-        
     }
 
     function safeTransferFrom(address _from, address _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd) public {
@@ -381,25 +360,10 @@ contract ChaingeDexFRC758 {
                 current = currSt.next;
                 continue;
             }
-            if(st.amount > currSt.amount) {
-                revert();
-            }
-
-            if (currSt.tokenStart >= st.tokenEnd) { 
-                 revert();
-            }
-            if(currSt.next == 0 && currSt.tokenEnd < st.tokenEnd) { 
-                 revert();
-            }
-            console.log('aaaaa');
-            if(currSt.tokenStart < st.tokenEnd && currSt.tokenStart > st.tokenStart) { 
-                console.log(currSt.tokenStart < st.tokenEnd ,  currSt.tokenStart > st.tokenStart);
-                console.log(current, addr);
-                console.log(currSt.tokenStart,  st.tokenEnd ,  currSt.tokenStart, st.tokenStart);
-
-                console.log('amountaaaaa', st.amount);
-                revert();
-            }
+            require(st.amount <= currSt.amount, 'FRC758: insufficient balance');
+            require(currSt.tokenStart < st.tokenEnd, 'FRC758: subSlice time check fail point 1');
+            require(!(currSt.next == 0 && currSt.tokenEnd < st.tokenEnd), 'FRC758: subSlice time check fail point 2');
+            require(!(currSt.tokenStart < st.tokenEnd && currSt.tokenStart > st.tokenStart), 'FRC758: subSlice time check fail point 3');
 
             if(currSt.tokenStart == st.tokenStart && currSt.tokenEnd == st.tokenEnd) {
                 currSt.amount -= st.amount;
@@ -427,12 +391,9 @@ contract ChaingeDexFRC758 {
                 if(current == headerIndex[addr]) { 
                     headerIndex[addr] = index; 
                 }else {
-                    
                     uint256 _current = headerIndex[addr];
                     while(_current > 0) {
-                        
                         if(balances[addr][_current].next == current)  {
-                           
                             balances[addr][_current].next = index;
                             break;
                         }
@@ -444,7 +405,6 @@ contract ChaingeDexFRC758 {
                 uint256 currStTokenEnd = currSt.tokenEnd;
                 currSt.amount -= st.amount;
                 currSt.tokenStart = st.tokenStart;
-
                 if(currStTokenEnd >= st.tokenEnd) {
                     if(currStTokenEnd > st.tokenEnd) {
                          uint256 index2 = _addSlice(addr, st.tokenEnd, currStTokenEnd, currStAmunt, currSt.next);

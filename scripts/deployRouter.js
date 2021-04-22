@@ -37,7 +37,7 @@ async function main() {
   const {tokenA, tokenB} = await frc758()
 
   await sleep()
-  const {uniswapV2Factory} = await factory(other.address)
+  const {uniswapV2Factory} = await factory(owner.address, other.address)
 
   const pair =  await createPair(uniswapV2Factory, tokenA, tokenB)
   await sleep()
@@ -51,22 +51,32 @@ async function main() {
 
   const now = getNow() + 10;
 
-  const bal = await tokenA.timeBalanceOf(signers.address, now, 666666666666); // startTime 必须大于当前时间
+  const bal = await tokenA.timeBalanceOf(signers.address, 1619395996, 666666666666); // startTime 必须大于当前时间
   console.log(' addLiquidity 之后 tokenA balance', parseInt(bal._hex));
   
-  const bal2 = await tokenB.timeBalanceOf(signers.address, now, 666666666666); // startTime 必须大于当前时间
+  const bal2 = await tokenB.timeBalanceOf(signers.address, 1619395996, 666666666666); // startTime 必须大于当前时间
   console.log(' addLiquidity 之后  tokenB balance', parseInt(bal2._hex));
 
+  await feeToBalance( pair, other.address, owner, )
   await sleep()
   await swap(uniRouter, tokenA.address, tokenB.address)
 
   await checkBalance(tokenA, tokenB)
 
+  await feeToBalance( pair, other.address, owner, )
+
   await sleep()
   await removeLiquidity(uniRouter, tokenA.address, tokenB.address, 1111111, 1000002507520, 3999990000128)
   await checkBalance(tokenA, tokenB)
 
-  await feeToBalance( pair, other.address, owner)
+  const lpTokenBalance = await feeToBalance( pair, other.address, owner, )
+  console.log(lpTokenBalance);
+  await feeToRemoveLiquidity(uniRouter, tokenA.address, tokenB.address, lpTokenBalance, 0, 0, other.address);
+
+  const bal3 = await tokenA.timeBalanceOf(other.address, 1619395996, 666666666666); 
+  const bal4 = await tokenB.timeBalanceOf(other.address, 1619395996, 666666666666); 
+  console.log('feeTo 取出来的A', bal3 )
+  console.log('feeTo 取出来的B', bal4 )
 }
 
 // We recommend this pattern to be able to use async/await everywhere
@@ -140,13 +150,16 @@ async function frc758() {
   }
 }
 
-async function factory(addr) {
+async function factory(addr, otherAddress) {
   console.log('start ChaingeDexFactory')
   const UniswapV2Factory = await hre.ethers.getContractFactory("ChaingeDexFactory");
   const uniswapV2Factory = await UniswapV2Factory.deploy(addr);
   await uniswapV2Factory.deployed();
   console.log('end uniswapV2Factory')
   await sleep()
+  
+  await uniswapV2Factory.setFeeTo(otherAddress);
+
   return {
     uniswapV2Factory: uniswapV2Factory
   }
@@ -190,8 +203,8 @@ async function addLiquidity(uniRouter, addressA, addressB) {
     addressB,
     "1000000000000",
     "4000000000000",
-    "0",
-    "0",
+    "1000000000000",
+    "4000000000000",
     signers.address,
     9999999999999,
     [1619395996, 666666666666,1619395996,666666666666]
@@ -240,18 +253,34 @@ async function swap(uniRouter, addressA, addressB) {
 
 async function checkBalance(tokenA, tokenB) {
   const now = getNow() + 500;
-  const balanceA = await tokenA.timeBalanceOf(signers.address, now, 666666666666)
-  const balanceB = await tokenB.timeBalanceOf(signers.address, now, 666666666666)
-
+  const balanceA = await tokenA.timeBalanceOf(signers.address, 1619395996, 666666666666)
+  const balanceB = await tokenB.timeBalanceOf(signers.address, 1619395996, 666666666666)
   console.log('然后A 和 B ',parseInt(balanceA._hex), parseInt(balanceB._hex));
 }
 
 async function feeToBalance(pair ,feeToAddress, signersAddress) {
   console.log('feeToAddress', feeToAddress)
-   const now = getNow() + 500;
    const pairObj = await hre.ethers.getContractAt('ChaingeDexPair', pair, signersAddress)
-  //  console.log('pairObj', pairObj)
-   const otherBalance = await pairObj.timeBalanceOf(feeToAddress, now, 666666666666)
-
+   const otherBalance = await pairObj.timeBalanceOf(feeToAddress, 1619395996, 666666666666)
    console.log('feeToBalance ',parseInt(otherBalance._hex));
+   const signersBalance = await pairObj.timeBalanceOf(signersAddress.address, 1619395996, 666666666666)
+   console.log('signersAddress有多少流动性代币 ',parseInt(signersBalance._hex));
+
+  return parseInt(otherBalance._hex)
+}
+
+async function feeToRemoveLiquidity(uniRoute, addressA, addressB, liquidity, amountAMin, amountBMin, to) {
+  console.log('feeTo 开始取钱', liquidity, amountAMin, amountBMin, to)
+  const now = getNow() + 500;
+  await uniRoute.removeLiquidity(
+    addressA,
+    addressB,
+    liquidity,
+    amountAMin,
+    amountBMin,
+    to,
+    9999999999999,
+    [1619395996, 666666666666, 1619395996, 666666666666]
+  )
+  console.log('removeLiquidity success')
 }
