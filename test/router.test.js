@@ -57,51 +57,50 @@ describe("FRC758", function () {
                 const deltaA = afterMint[0] - afterAddLiquidity[0]
                 const deltaB = afterMint[1] - afterAddLiquidity[1]
                 const k = (deltaA) * (deltaB)
-                const liq = await utils.feeToBalance(pair, forLiquidity, config)
+
                 await sleep()
 
-                describe('remveLiquidity', () => {
-                    it('remove', async () => {
-                        await utils.removeLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, liq/2, config)
-                        const afterRemoveLiquidity = await utils.checkBalance(forLiquidity, tokenA, tokenB, config)
-                        const removeDeltaA = afterRemoveLiquidity[0] - afterAddLiquidity[0]
-                        const removeDeltaB = afterRemoveLiquidity[1] - afterAddLiquidity[1]
-                        const _k = removeDeltaA * removeDeltaB * Math.pow(deltaA / removeDeltaA, 2)
-                        await expect(_k).to.equal(k);
+
+                describe("addLiquidity-2", () => {
+                    it('add-2', async () => {
+                        const res = await utils.addLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, config)
+                        const afterAddLiquidity = await utils.checkBalance(forLiquidity, tokenA, tokenB, config)
+                        await sleep()
+                        const deltaA = afterMint[0] - afterAddLiquidity[0]
+                        const deltaB = afterMint[1] - afterAddLiquidity[1]
+                        const k = (deltaA) * (deltaB)
+                        await sleep()
+
+
+                        describe('remveLiquidity', () => {
+                            it('remove', async () => {
+                                const liq = await utils.feeToBalance(pair, forLiquidity, config)
+                                console.log('liq', liq)
+                                await utils.removeLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, liq / 2, config)
+                                const afterRemoveLiquidity = await utils.checkBalance(forLiquidity, tokenA, tokenB, config)
+                                const removeDeltaA = afterRemoveLiquidity[0] - afterAddLiquidity[0]
+                                const removeDeltaB = afterRemoveLiquidity[1] - afterAddLiquidity[1]
+                                const _k = removeDeltaA * removeDeltaB * Math.pow(deltaA / removeDeltaA, 2)
+                                await expect(parseInt(_k)).to.equal(parseInt(k));
+
+                                describe('remveLiquidity-2', () => {
+                                    it('remove-2', async () => {
+                                        const liq = await utils.feeToBalance(pair, forLiquidity, config)
+                                        console.log('liq', liq)
+                                        await utils.removeLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, liq / 2, config)
+                                        const afterRemoveLiquidity = await utils.checkBalance(forLiquidity, tokenA, tokenB, config)
+                                        const removeDeltaA = afterRemoveLiquidity[0] - afterAddLiquidity[0]
+                                        const removeDeltaB = afterRemoveLiquidity[1] - afterAddLiquidity[1]
+                                        const _k = removeDeltaA * removeDeltaB * Math.pow(deltaA / removeDeltaA, 2)
+                                        await expect(parseInt(_k)).to.equal(parseInt(k));
+                                    })
+                                })
+                            })
+                        })
                     })
+
                 })
             })
         })
-
-        describe("addLiquidity-2", () => {
-            it('add-2', async () => {
-                const res = await utils.addLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, config)
-                const afterAddLiquidity = await utils.checkBalance(forLiquidity, tokenA, tokenB, config)
-                await sleep()
-                const deltaA = afterMint[0] - afterAddLiquidity[0]
-                const deltaB = afterMint[1] - afterAddLiquidity[1]
-                const k = (deltaA) * (deltaB)
-                const liq = await utils.feeToBalance(pair, forLiquidity, config)
-
-                console.log('liq', liq)
-
-
-                await sleep()
-
-                describe('remveLiquidity-2', () => {
-                    it('remove-2', async () => {
-                        await utils.removeLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, liq/2, config)
-                        const afterRemoveLiquidity = await utils.checkBalance(forLiquidity, tokenA, tokenB, config)
-                        const removeDeltaA = afterRemoveLiquidity[0] - afterAddLiquidity[0]
-                        const removeDeltaB = afterRemoveLiquidity[1] - afterAddLiquidity[1]
-                        const _k = removeDeltaA * removeDeltaB * Math.pow(deltaA / removeDeltaA, 2)
-                        await expect(_k).to.equal(k);
-                    })
-                })
-            })
-
-        })
-
-
     })
 })
