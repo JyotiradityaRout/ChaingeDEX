@@ -103,10 +103,12 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
         address feeTo = IChaingeDexFactory(factory).feeTo();
         feeOn = feeTo != address(0);
         uint _kLast = kLast; // gas savings
+        console.log('_mintFee', feeOn, feeTo);
         if (feeOn) {
             if (_kLast != 0) {
                 uint rootK = Math.sqrt(uint(_reserve0).mul(_reserve1));
                 uint rootKLast = Math.sqrt(_kLast);
+                console.log('K', rootK, rootKLast);
                 if (rootK > rootKLast) {
                     uint numerator = totalSupply.mul(rootK.sub(rootKLast));
                     uint denominator = rootK.mul(1).add(rootKLast);
