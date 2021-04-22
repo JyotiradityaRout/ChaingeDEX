@@ -53,15 +53,15 @@ async function main() {
     console.log(`k: ${k}`)
     console.log(`理论上liquidity的值：${liq}`)
 
-
-    await utils.removeLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, 1999999999000, config)
+    await utils.removeLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, utils.addZero(1, 12), config)
     const afterRemoveLiquidity = await utils.checkBalance(forLiquidity, tokenA, tokenB, config)
     const removeDeltaA = afterRemoveLiquidity[0] - afterAddLiquidity[0]
     const removeDeltaB = afterRemoveLiquidity[1] - afterAddLiquidity[1]
+    const _k = removeDeltaA * removeDeltaB * Math.pow(deltaA / removeDeltaA, 2)
     console.log(`TokenA退了: ${removeDeltaA}`)
     console.log(`TokenB退了: ${removeDeltaB}`)
-    console.log(`k: ${removeDeltaA * removeDeltaB * Math.pow(deltaA / removeDeltaA, 2)}`)
-
+    console.log(`removeLiquidity后，k的理论值: ${_k}`)
+    console.log(`result：${k === _k}`)
 
     await sleep()
     await utils.swap(forSwap, uniRouter, tokenA.address, tokenB.address, config)

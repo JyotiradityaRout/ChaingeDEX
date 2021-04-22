@@ -224,3 +224,10 @@ module.exports._checkBalance = async (timer = config.checkTImer, signers, token)
     console.log(signers)
     return parseInt(balance._hex)
 }
+
+module.exports.getK = async (afterRemoveLiquidity) => {
+    const removeDeltaA = afterRemoveLiquidity[0] - afterAddLiquidity[0]
+    const removeDeltaB = afterRemoveLiquidity[1] - afterAddLiquidity[1]
+    const _k = removeDeltaA * removeDeltaB * Math.pow(deltaA / removeDeltaA, 2)
+    return _k
+}
