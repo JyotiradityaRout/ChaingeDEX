@@ -83,6 +83,15 @@ describe("FRC758", function () {
                                 const _k = removeDeltaA * removeDeltaB * Math.pow(deltaA / removeDeltaA, 2)
                                 await expect(parseInt(_k)).to.equal(parseInt(k));
 
+                                // describe('swap', () => {
+                                //     it('swap', async () => {
+                                //         await utils.swap(forSwap, uniRouter, tokenA.address, tokenB.address, config)
+                                //         const afterSwap = await utils.checkBalance(forSwap, tokenA, tokenB, config)
+                                //         console.log(`swap后，tokenA的理论值：${k / (deltaB)}`)
+                                //         console.log(`result：${k / (deltaB) === deltaA}`)
+                                //         await expect(parseInt(_k)).to.equal(parseInt(k));
+                                //     })
+                                // })
                                 describe('remveLiquidity-2', () => {
                                     it('remove-2', async () => {
                                         const liq = await utils.feeToBalance(pair, forLiquidity, config)
@@ -95,6 +104,7 @@ describe("FRC758", function () {
                                         await expect(parseInt(_k)).to.equal(parseInt(k));
                                     })
                                 })
+
                             })
                         })
                     })
