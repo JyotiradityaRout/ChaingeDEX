@@ -59,12 +59,12 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
         uint amount1Out,
         address indexed to
     );
+    
     event Sync(uint112 reserve0, uint112 reserve1);
 
     constructor() public {
         factory = msg.sender;
     }
-
 
     struct SliceAccount {
         address _address; //token amount

@@ -3,12 +3,14 @@ pragma solidity =0.5.16;
 
 interface IFRC758 {
     event Transfer(address indexed _from, address indexed _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd);
-    event ApprovalForAll(address indexed _owner, address indexed _operator, bool _spender);
+    event ApprovalForAll(address indexed _owner, address indexed _spender, uint256 _approved);
     function sliceOf(address _owner) external view returns (uint256[] memory, uint256[] memory, uint256[] memory);
     function timeBalanceOf(address _owner, uint256 tokenStart, uint256 tokenEnd) external view returns (uint256);
-    function setApprovalForAll(address _spender, bool _approved) external;
-    function isApprovedForAll(address _owner, address _spender) external view returns (bool);
-    function safeTransferFrom(address _from, address _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd) external;
+    
+    function transferFrom(address _from, address _to, uint256 amount) external returns (bool);
+
+    function allowance(address _owner, address _spender) external view returns (uint256);
+
     function totalSupply() external view returns (uint256);
     function name() external view returns (string memory);
     function symbol() external view returns (string memory);

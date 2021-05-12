@@ -10,17 +10,19 @@ contract ChaingeDexFRC758 {
     uint8 public constant decimals = 18;
     uint  public totalSupply;
     // mapping(address => uint) public balanceOf;
-    mapping(address => mapping(address => uint)) public allowance;
+    // mapping(address => mapping(address => uint)) public allowance;
     bytes32 public DOMAIN_SEPARATOR;
     // keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
     bytes32 public constant PERMIT_TYPEHASH = 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9;
+
     mapping(address => uint) public nonces;
-    uint256 public constant MAX_TIME = 666666666666;
+
+    uint256 public constant MAX_TIME = 18446744073709551615;
 
     event Approval(address indexed owner, address indexed spender, uint value);
     event Transfer(address indexed from, address indexed to, uint value);
     event Transfer(address indexed _from, address indexed _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd);
-    event ApprovalForAll(address indexed _owner, address indexed _operator, bool _approved);
+    event ApprovalForAll(address indexed _owner, address indexed _operator, uint256 _approved);
 
     struct SlicedToken {
         uint256 amount; 
@@ -28,12 +30,19 @@ contract ChaingeDexFRC758 {
         uint256 tokenEnd;
         uint256 next;
     }
+
     mapping (address => mapping (uint256 => SlicedToken)) internal balances;
+    
+    mapping (address => uint256) internal balance;
+
     mapping (address => uint256) internal ownedSlicedTokensCount;
-    mapping (address => mapping (address => bool)) internal operatorApprovals;
+
+    mapping (address => mapping (address => uint256)) internal operatorApprovals;
+
     mapping (address => uint256 ) headerIndex;
     
     constructor() public {
+
         uint chainId = 32659;
 
         DOMAIN_SEPARATOR = keccak256(
@@ -47,36 +56,66 @@ contract ChaingeDexFRC758 {
         );
     }
 
-    function _mint(address to, uint value) internal {
-         totalSupply = totalSupply.add(value);
-         _mint(to, value, 1619075045, MAX_TIME);
-        emit Transfer(address(0), to, value);
+    function _mint(address _from, uint256 amount) internal {
+        _validateAddress(_from);
+        _validateAmount(amount);
+        balance[_from] = balance[_from].add(amount);
+        emit Transfer(address(0), _from, amount, 0, MAX_TIME);
     }
 
-    function _burn(address from, uint value) internal {
-        _burn(from, value,  block.timestamp, MAX_TIME);
-        totalSupply = totalSupply.sub(value);
-        emit Transfer(from, address(0), value);
+    function _burn(address _from, uint256 amount) internal {
+        _validateAddress(_from);
+        _validateAmount(amount);
+         balance[_from] = balance[_from].sub(amount);
+        emit Transfer(_from, address(0), amount, 0, MAX_TIME);
     }
 
-    function _approve(address owner, address spender, uint value) private {
-        allowance[owner][spender] = value;
-        emit Approval(owner, spender, value);
+    function _mintSlice(address _from,  uint256 amount, uint256 tokenStart, uint256 tokenEnd) internal {
+        _validateAddress(_from);
+        _validateAmount(amount);
+        SlicedToken memory st = SlicedToken({amount: amount, tokenStart: tokenStart, tokenEnd: tokenEnd, next: 0});
+        _addSliceToBalance(_from, st);
+        emit Transfer(address(0), _from, amount, 0, MAX_TIME);
     }
 
-    function _transfer(address from, address to, uint value) private {
-    }
-    function approve(address spender, uint value) external returns (bool) {
-        _approve(msg.sender, spender, value);
-        return true;
+    function _burnSlice(address _from, uint256 amount, uint256 tokenStart, uint256 tokenEnd) internal {
+        _validateAddress(_from);
+        _validateAmount(amount);
+        SlicedToken memory st = SlicedToken({amount: amount, tokenStart: tokenStart, tokenEnd: tokenEnd, next: 0});
+        _subSliceFromBalance(_from, st);
+        emit Transfer(_from, address(0), amount, tokenStart, tokenEnd);
     }
 
     function transfer(address to, uint value) external returns (bool) {
-        _transfer(msg.sender, to, value);
+        // _transfer(msg.sender, to, value);
         return true;
     }
-    function transferFrom(address sender, address _receiver, uint256 amount) public returns (bool) {
-        safeTransferFrom(sender, _receiver, amount, block.timestamp, MAX_TIME);
+
+    function transferFrom(address _from, address _to, uint256 amount) public returns (bool) { 
+        _validateAddress(_from);
+        _validateAddress(_to);
+        _validateAmount(amount);
+
+         if(msg.sender != _from) {
+            operatorApprovals[_from][msg.sender] = operatorApprovals[_from][msg.sender].sub(amount);
+         }
+
+        if(amount <= balance[_from]) {
+            balance[_from] = balance[_from].sub(amount);
+            balance[_to] = balance[_to].add(amount);
+			emit Transfer(_from, _to, amount, 0, MAX_TIME);
+            return true;
+        }
+
+        uint256 _amount = amount.sub(balance[_from]);        
+        balance[_from] = 0;
+
+        SlicedToken memory st = SlicedToken({amount: _amount, tokenStart: block.timestamp, tokenEnd: MAX_TIME, next: 0});
+        _subSliceFromBalance(_from, st);
+
+        balance[_to] = balance[_to].add(amount);
+		
+		emit Transfer(_from, _to, amount, 0, MAX_TIME);
         return true;
     }
 
@@ -113,21 +152,19 @@ contract ChaingeDexFRC758 {
     }
 
     function sliceOf(address from) public view returns (uint256[] memory, uint256[] memory, uint256[] memory) {
-        // console.log('ownedSlicedTokensCount', ownedSlicedTokensCount[from]);
         _validateAddress(from);
        uint header = headerIndex[from];
-        // console.log('header', header);
        if(header == 0) {
            return (new uint256[](0), new uint256[](0), new uint256[](0));
        }
         uint256 count = 0;
      
         while(header > 0) {
-                SlicedToken memory st = balances[from][header];
-                if(block.timestamp < st.tokenEnd) {
-                    count++;
-                }
-                header = st.next;
+            SlicedToken memory st = balances[from][header];
+            if(block.timestamp < st.tokenEnd) {
+                count++;
+            }
+            header = st.next;
         }
         uint256 allCount = ownedSlicedTokensCount[from];
         uint256[] memory amountArray = new uint256[](count);
@@ -181,48 +218,19 @@ contract ChaingeDexFRC758 {
     function balanceOf(address account) public view returns (uint256) {
         return timeBalanceOf(account, block.timestamp, MAX_TIME);
     }
-    function setApprovalForAll(address _to, bool _approved) public {
-        require(_to != msg.sender, "wrong approval destination");
-        operatorApprovals[msg.sender][_to] = _approved;
-        emit ApprovalForAll(msg.sender, _to, _approved);
+
+    function _approve(address owner, address _spender, uint value) private {
+        require(_spender != msg.sender, "FRC758: wrong approval destination");
+        operatorApprovals[msg.sender][_spender] = value;
+        emit ApprovalForAll(msg.sender, _spender, value);
     }
 
-    function isApprovedForAll(address _owner, address _operator) public view returns (bool) {
-        return operatorApprovals[_owner][_operator];
+    function approve(address owner,  address spender,  uint256 amount) public {
+        _approve(owner, spender, amount);
     }
 
-    //the _spender is trying to spend assets from _from
-    function isApprovedOrOwner(address _spender, address _from) public view returns (bool) {
-        return _spender == _from || isApprovedForAll(_from, _spender);
-    }
-
-    function safeTransferFrom(address _from, address _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd) public {
-		// require(checkAndCallSafeTransfer(_from, _to, amount, tokenStart, tokenEnd), "can't make safe transfer");
-        _validateAddress(_from);
-        _validateAddress(_to);
-        _validateAmount(amount);
-        // _checkRights(isApprovedOrOwner(msg.sender, _from));
-        require(_from != _to, "no sending to yourself");
-        SlicedToken memory st = SlicedToken({amount: amount, tokenStart: tokenStart, tokenEnd: tokenEnd, next: 0});
-        _subSliceFromBalance(_from, st);
-        _addSliceToBalance(_to, st);
-        emit Transfer(_from, _to, amount, tokenStart, tokenEnd);
-    }
-
-    function _mint(address _from,  uint256 amount, uint256 tokenStart, uint256 tokenEnd) internal {
-        // _validateAddress(_from);
-        _validateAmount(amount);
-        SlicedToken memory st = SlicedToken({amount: amount, tokenStart: tokenStart, tokenEnd: tokenEnd, next: 0});
-        _addSliceToBalance(_from, st);
-        emit Transfer(address(0), _from, amount, tokenStart, tokenEnd);
-    }
-
-    function _burn(address _from, uint256 amount, uint256 tokenStart, uint256 tokenEnd) internal {
-        _validateAddress(_from);
-        _validateAmount(amount);
-        SlicedToken memory st = SlicedToken({amount: amount, tokenStart: tokenStart, tokenEnd: tokenEnd, next: 0});
-        _subSliceFromBalance(_from, st);
-        emit Transfer(_from, address(0), amount, tokenStart, tokenEnd);
+    function allowance(address _owner, address _spender) public view returns (uint256) {
+        return operatorApprovals[_owner][_spender];
     }
 
     function _addSliceToBalance(address addr, SlicedToken memory st) internal {
@@ -416,5 +424,46 @@ contract ChaingeDexFRC758 {
             }
             current = currSt.next;
         }while(current>0);
+    }
+
+    function _clean(address from, uint256 tokenStart, uint256 tokenEnd) internal {
+        uint256 minBalance = timeBalanceOf(from, tokenStart, tokenEnd);
+		uint256 firstDeletedIndex = 0;
+        uint256 lastIndex = 0;
+        uint256 _tokenStart = tokenStart;
+		uint256 next = headerIndex[from];
+
+		while(next > 0) {
+		    SlicedToken memory st = balances[from][next];
+
+            if(tokenEnd < st.tokenStart) {
+                lastIndex = next;
+                break;
+            }
+
+            if(tokenStart >= st.tokenEnd || tokenEnd <= st.tokenStart) {
+                lastIndex = next;
+                next = st.next;
+                continue;
+            }
+
+            delete balances[from][next];
+            if(firstDeletedIndex == 0) {
+                firstDeletedIndex = next; 
+            }
+
+            tokenStart = st.tokenEnd;
+            lastIndex = next;
+            next = st.next;
+        }
+
+        if(firstDeletedIndex != 0 && firstDeletedIndex != lastIndex) { // move last to first
+             balances[from][firstDeletedIndex] = balances[from][lastIndex];
+             delete balances[from][lastIndex];
+        }
+
+        if(minBalance > 0) {
+            _mintSlice(from, minBalance, _tokenStart, tokenEnd);  
+        }  
     }
 }
