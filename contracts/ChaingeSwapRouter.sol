@@ -6,7 +6,6 @@ import './interfaces/IChaingeDexPair.sol';
 import './TransferHelper.sol';
 import '@uniswap/v2-periphery/contracts/libraries/SafeMath.sol';
 
-
 import "@nomiclabs/buidler/console.sol";
 
 interface IFRC758 {
@@ -28,13 +27,11 @@ interface IFRC758 {
 library ChaingeDexLibrary {
     using SafeMath for uint;
     function pairFor(address factory, address tokenA, address tokenB, uint256[] memory time) internal view returns (address pair) {
-         (address token0, address token1) = (tokenA, tokenB);
         pair = IChaingeDexFactory(factory).getPair(tokenA, tokenB, time);
     }
     // returns sorted token addresses, used to handle return values from pairs sorted in this order
     function sortTokens(address tokenA, address tokenB) internal pure returns (address token0, address token1) {
         require(tokenA != tokenB, 'ChaingeDexLibrary: IDENTICAL_ADDRESSES');
-        // (token0, token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
         (token0, token1) =  (tokenA, tokenB);
         require(token0 != address(0), 'ChaingeDexLibrary: ZERO_ADDRESS');
     }
@@ -65,7 +62,7 @@ library ChaingeDexLibrary {
     // given an output amount of an asset and pair reserves, returns a required input amount of the other asset
     function getAmountIn(uint amountOut, uint reserveIn, uint reserveOut) internal pure returns (uint amountIn) {
         require(amountOut > 0, 'ChaingeDexLibrary: INSUFFICIENT_OUTPUT_AMOUNT');
-        require(reserveIn > 0 && reserveOut > 0, 'UniswapV2Library: INSUFFICIENT_LIQUIDITY');
+        require(reserveIn > 0 && reserveOut > 0, 'ChaingeDexLibrary: INSUFFICIENT_LIQUIDITY');
         uint numerator = reserveIn.mul(amountOut).mul(1000);
         uint denominator = reserveOut.sub(amountOut).mul(998);
         amountIn = (numerator / denominator).add(1);
@@ -182,6 +179,7 @@ contract ChaingeSwap is IChaingeDexRouter01 {
         TransferHelper.safeTransferFrom(tokenB, msg.sender, pair, amountB, time[2], time[3]);
         liquidity = IChaingeDexPair(pair).mint(to, time);
     }
+
     function removeLiquidity(
         address tokenA,
         address tokenB,

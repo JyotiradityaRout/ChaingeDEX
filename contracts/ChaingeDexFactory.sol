@@ -1,8 +1,8 @@
-pragma solidity =0.5.16;
+pragma solidity >=0.5.16;
 import './interfaces/IChaingeDexFactory.sol';
 import './ChaingeDexPair.sol';
 
-import "@nomiclabs/buidler/console.sol";
+// import "@nomiclabs/buidler/console.sol";
 
 contract ChaingeDexFactory is IChaingeDexFactory {
     address public feeTo;
@@ -16,6 +16,7 @@ contract ChaingeDexFactory is IChaingeDexFactory {
 
     constructor(address _feeToSetter) public {
         feeToSetter = _feeToSetter;
+        require(feeToSetter != address(0), 'ChaingeDex: ZERO_ADDRESS');
     }
     
     function allPairsLength() external view returns (uint) {
@@ -26,10 +27,11 @@ contract ChaingeDexFactory is IChaingeDexFactory {
         (address token0, address token1) = (tokenA, tokenB);
         bytes32 tokenHash = keccak256(abi.encodePacked(token0, token1, time));
 
-        require(token0 != address(0), 'UniswapV2: ZERO_ADDRESS');
-        require(_getPair[tokenHash] == address(0), 'UniswapV2: PAIR_EXISTS');
+        require(token0 != address(0), 'ChaingeDex: ZERO_ADDRESS');
+        require(_getPair[tokenHash] == address(0), 'ChaingeDex: PAIR_EXISTS');
 
         bytes memory bytecode = type(ChaingeDexPair).creationCode;
+
         assembly {
             pair := create(0, add(bytecode, 32), mload(bytecode))
         }
@@ -44,11 +46,13 @@ contract ChaingeDexFactory is IChaingeDexFactory {
         return _getPair[tokenHash];
     }
     function setFeeTo(address _feeTo) external {
-        require(msg.sender == feeToSetter, 'UniswapV2: FORBIDDEN');
+        require(msg.sender == feeToSetter, 'ChaingeDex: FORBIDDEN');
+        require(_feeTo != address(0), 'ChaingeDex: ZERO_ADDRESS');
         feeTo = _feeTo;
     }
     function setFeeToSetter(address _feeToSetter) external {
-        require(msg.sender == feeToSetter, 'UniswapV2: FORBIDDEN');
+        require(msg.sender == feeToSetter, 'ChaingeDex: FORBIDDEN');
+        require(_feeToSetter != address(0), 'ChaingeDex: ZERO_ADDRESS');
         feeToSetter = _feeToSetter;
     }
 }

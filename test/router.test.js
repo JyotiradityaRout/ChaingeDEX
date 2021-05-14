@@ -104,13 +104,41 @@ describe("FRC758", function () {
                                         await expect(parseInt(_k)).to.equal(parseInt(k));
                                     })
                                 })
-
                             })
                         })
                     })
-
                 })
             })
         })
+    })
+})
+
+
+describe('DEX', function () {
+    it('DEX', async function () {
+        const [forLiquidity, forSwap] = await ethers.getSigners();
+        const amountA = utils.addZero(1, 18);
+        const amountB = utils.addZero(45, 17);
+        const timer = parseInt(Date.now() / 1000)
+        const config = {
+            startTime: 1619395996,
+            endTime: 666666666666,
+            amountA,
+            amountB,
+            // 流动性充的量
+            amountADesired: utils.addZero(1, 12),
+            amountBDesired: utils.addZero(4, 12),
+            // addLiquidity swap两两比例相同
+            // addLiquidity
+            amountAMin: utils.addZero(1, 12),
+            amountBMin: utils.addZero(4, 12),
+            // swap
+            amountOut: utils.addZero(1, 10),
+            amountInMax: utils.addZero(4, 10),
+            // removeLiquidity
+            // liquidity: utils.addZero(1, 12),
+            amountAMin: 0,
+            amountBMin: 0
+        }
     })
 })

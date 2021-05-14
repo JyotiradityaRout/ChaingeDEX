@@ -40,11 +40,11 @@ library TransferHelper {
         uint256 startTime,
         uint256 endTime
     ) internal {
-        bytes4 SELECTOR = bytes4(keccak256(bytes('transferFrom(address,address,uint256,uint256,uint256)')));
+        bytes4 SELECTOR = bytes4(keccak256(bytes('timeSliceTransferFrom(address,address,uint256,uint256,uint256)')));
         (bool success, bytes memory data) = token.call(abi.encodeWithSelector(SELECTOR, from, to, value, startTime, endTime));
         require(
             success && (data.length == 0 || abi.decode(data, (bool))),
-            'TransferHelper::transferFrom: safetransferFrom failed'
+            'TransferHelper::transferFrom: timeSliceTransferFrom failed'
         );
     }
 }

@@ -19,7 +19,7 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
     uint public constant MINIMUM_LIQUIDITY = 10**3;
 
     // safeTransferFrom(address _from, address _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd) 
-    bytes4 private constant SELECTOR = bytes4(keccak256(bytes('safeTransferFrom(address,address,uint256,uint256,uint256)')));
+    bytes4 private constant SELECTOR = bytes4(keccak256(bytes('timeSliceTransferFrom(address,address,uint256,uint256,uint256)')));
 
     address public factory;
     uint112 private reserve0;           // uses single storage slot, accessible via getReserves
@@ -98,17 +98,15 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
         emit Sync(reserve0, reserve1);
     }
 
-    // if fee is on, mint liquidity equivalent to 1/6th of the growth in sqrt(k)
+    // if fee is on, mint liquidity equivalent to 1/2th of the growth in sqrt(k)
     function _mintFee(uint112 _reserve0, uint112 _reserve1) private returns (bool feeOn) {
         address feeTo = IChaingeDexFactory(factory).feeTo();
         feeOn = feeTo != address(0);
         uint _kLast = kLast; // gas savings
-        console.log('_mintFee', feeOn, feeTo);
         if (feeOn) {
             if (_kLast != 0) {
                 uint rootK = Math.sqrt(uint(_reserve0).mul(_reserve1));
                 uint rootKLast = Math.sqrt(_kLast);
-                console.log('K', rootK, rootKLast);
                 if (rootK > rootKLast) {
                     uint numerator = totalSupply.mul(rootK.sub(rootKLast));
                     uint denominator = rootK.mul(1).add(rootKLast);
@@ -124,8 +122,9 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
     // this low-level function should be called from a contract which performs important safety checks
     function mint(address to, uint256[] calldata time) external lock returns (uint liquidity) {
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
-        uint256 balance0 = IFRC758(token0._address).timeBalanceOf(address(this), time[0], time[1]);
-        uint256 balance1 = IFRC758(token1._address).timeBalanceOf(address(this), time[2], time[3]);
+
+        uint256 balance0 = getAllBalance(token0._address, address(this), time[0], time[1]);
+        uint256 balance1 = getAllBalance(token1._address, address(this), time[2], time[3]);
         uint amount0 = balance0.sub(_reserve0);
         uint amount1 = balance1.sub(_reserve1);
 
@@ -145,24 +144,34 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
         emit Mint(msg.sender, amount0, amount1);
     }
 
+    function getAllBalance(address token, address from, uint256 start, uint256 end) internal returns(uint256) {
+        uint256 balance0 = IFRC758(token).timeBalanceOf(from, start, end);
+        uint256 balance = IFRC758(token).balanceOf(from);
+        return balance0 + balance;
+    }
+
     // this low-level function should be called from a contract which performs important safety checks
     function burn(address to, uint256[] calldata time) external lock returns (uint amount0, uint amount1) {
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
         address _token0 = token0._address;
         address _token1 = token1._address;                             // gas savings
-        uint256 balance0 = IFRC758(token0._address).timeBalanceOf(address(this), time[0], time[1]);
-        uint256 balance1 = IFRC758(token1._address).timeBalanceOf(address(this), time[2], time[3]);
-        uint liquidity = timeBalanceOf(address(this), time[0], time[1]);
+        uint256 balance0 = getAllBalance(token0._address, address(this), token0.tokenStart, token0.tokenEnd);
+        uint256 balance1 = getAllBalance(token1._address, address(this), token1.tokenStart, token1.tokenEnd);
+
+         uint liquidity = IFRC758(token0._address).balanceOf(address(this));
+
         bool feeOn = _mintFee(_reserve0, _reserve1);
         uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
+
+        console.log(liquidity, balance0, _totalSupply);
         amount0 = liquidity.mul(balance0) / _totalSupply; // using balances ensures pro-rata distribution
         amount1 = liquidity.mul(balance1) / _totalSupply; // using balances ensures pro-rata distribution
         require(amount0 > 0 && amount1 > 0, 'ChaingeDex: INSUFFICIENT_LIQUIDITY_BURNED');
         _burn(address(this), liquidity);
         _safeTransfer(_token0, to, amount0, token0.tokenStart, token0.tokenEnd);
         _safeTransfer(_token1, to, amount1, token1.tokenStart, token1.tokenEnd);
-        balance0 = IFRC758(_token0).timeBalanceOf(address(this), token0.tokenStart, token0.tokenEnd);
-        balance1 = IFRC758(_token1).timeBalanceOf(address(this), token1.tokenStart, token1.tokenEnd);
+        balance0 = getAllBalance(token0._address, address(this), token0.tokenStart, token0.tokenEnd);
+        balance1 = getAllBalance(token1._address, address(this), token1.tokenStart, token1.tokenEnd);
         _update(balance0, balance1, _reserve0, _reserve1);
         if (feeOn) kLast = uint(reserve0).mul(reserve1); // reserve0 and reserve1 are up-to-date
         emit Burn(msg.sender, amount0, amount1, to);
@@ -183,19 +192,19 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
             if (amount0Out > 0) _safeTransfer(_token0, to, amount0Out, token0.tokenStart, token0.tokenEnd); // optimistically transfer tokens
             if (amount1Out > 0) _safeTransfer(_token1, to, amount1Out, token1.tokenStart, token1.tokenEnd); // optimistically transfer tokens
             if (data.length > 0) IUniswapV2Callee(to).uniswapV2Call(msg.sender, amount0Out, amount1Out, data);
+            balance0 = getAllBalance(_token0, address(this), token0.tokenStart, token0.tokenEnd);
+            balance1 = getAllBalance(_token1, address(this), token1.tokenStart, token1.tokenEnd);
 
-            balance0 = IFRC758(_token0).timeBalanceOf(address(this), token0.tokenStart, token0.tokenEnd);
-            balance1 = IFRC758(_token1).timeBalanceOf(address(this), token1.tokenStart, token1.tokenEnd);
         }
 
         uint amount0In = balance0 > _reserve0 - amount0Out ? balance0 - (_reserve0 - amount0Out) : 0;
         uint amount1In = balance1 > _reserve1 - amount1Out ? balance1 - (_reserve1 - amount1Out) : 0;
+
         require(amount0In > 0 || amount1In > 0, 'ChaingeDex: INSUFFICIENT_INPUT_AMOUNT');
         { // scope for reserve{0,1}Adjusted, avoids stack too deep errors
-
-        uint balance0Adjusted = balance0.mul(1000).sub(amount0In.mul(2));
-        uint balance1Adjusted = balance1.mul(1000).sub(amount1In.mul(2));
-        require(balance0Adjusted.mul(balance1Adjusted) >= uint(_reserve0).mul(_reserve1).mul(1000**2), 'ChaingeDex: K');
+            uint balance0Adjusted = balance0.mul(1000).sub(amount0In.mul(2));
+            uint balance1Adjusted = balance1.mul(1000).sub(amount1In.mul(2));
+            require(balance0Adjusted.mul(balance1Adjusted) >= uint(_reserve0).mul(_reserve1).mul(1000**2), 'ChaingeDex: K');
         }
 
         _update(balance0, balance1, _reserve0, _reserve1);

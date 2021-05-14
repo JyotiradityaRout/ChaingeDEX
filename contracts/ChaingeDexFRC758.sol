@@ -2,8 +2,9 @@ pragma solidity =0.5.16;
 
 import '@uniswap/v2-core/contracts/libraries/SafeMath.sol';
 import "@nomiclabs/buidler/console.sol";
+import './interfaces/IFRC758.sol';
 
-contract ChaingeDexFRC758 {
+contract ChaingeDexFRC758 is IFRC758 {
     using SafeMath for uint;
     string public constant name = 'ChaingeDex';
     string public constant symbol = 'ChaingeDex';
@@ -57,16 +58,17 @@ contract ChaingeDexFRC758 {
     }
 
     function _mint(address _from, uint256 amount) internal {
-        _validateAddress(_from);
         _validateAmount(amount);
         balance[_from] = balance[_from].add(amount);
+        totalSupply += amount;
         emit Transfer(address(0), _from, amount, 0, MAX_TIME);
     }
 
     function _burn(address _from, uint256 amount) internal {
         _validateAddress(_from);
         _validateAmount(amount);
-         balance[_from] = balance[_from].sub(amount);
+        balance[_from] = balance[_from].sub(amount);
+        totalSupply -= amount;
         emit Transfer(_from, address(0), amount, 0, MAX_TIME);
     }
 
@@ -87,7 +89,6 @@ contract ChaingeDexFRC758 {
     }
 
     function transfer(address to, uint value) external returns (bool) {
-        // _transfer(msg.sender, to, value);
         return true;
     }
 
@@ -119,6 +120,61 @@ contract ChaingeDexFRC758 {
         return true;
     }
 
+    function timeSliceTransferFrom(address _from, address _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd) public {
+        _validateAddress(_from);
+        _validateAddress(_to);
+        _validateAmount(amount);
+
+        if(msg.sender != _from) {
+            operatorApprovals[_from][msg.sender] = operatorApprovals[_from][msg.sender].sub(amount);
+        }
+
+        require(_from != _to, "FRC758: can not send to yourself");
+        if(tokenStart < block.timestamp) tokenStart = block.timestamp;
+        require(tokenStart < tokenEnd, "FRC758: tokenStart>=tokenEnd");
+        uint256 timeBalance = timeBalanceOf(_from, tokenStart, tokenEnd); 
+
+        if(amount <= timeBalance) {
+            SlicedToken memory st = SlicedToken({amount: amount, tokenStart: tokenStart, tokenEnd: tokenEnd, next: 0});
+            _subSliceFromBalance(_from, st);
+            _addSliceToBalance(_to, st);
+            return;
+        }
+
+        uint256 _amount = amount.sub(timeBalance); 
+
+        if(timeBalance != 0) {
+            SlicedToken memory st = SlicedToken({amount: timeBalance, tokenStart: tokenStart, tokenEnd: tokenEnd, next: 0}); 
+            _subSliceFromBalance(_from, st);  
+        }
+
+        balance[_from] = balance[_from].sub(_amount); 
+
+        change(_from, _amount, tokenStart, tokenEnd);
+
+        if(tokenStart <= block.timestamp && tokenEnd == MAX_TIME) {
+             balance[_to] = balance[_to].add(amount);
+             return;
+        }
+        SlicedToken memory toSt = SlicedToken({amount: amount, tokenStart: tokenStart, tokenEnd: tokenEnd, next: 0});
+        _addSliceToBalance(_to, toSt); 
+        
+        emit Transfer(_from, _to, amount, tokenStart, tokenEnd);
+    }
+
+    function change(address _from, uint256 _amount, uint256 tokenStart, uint256 tokenEnd) internal {
+        if(tokenStart > block.timestamp) {
+              SlicedToken memory leftSt = SlicedToken({amount: _amount, tokenStart: block.timestamp, tokenEnd: tokenStart, next: 0});
+             _addSliceToBalance(_from, leftSt);
+        }
+        if(tokenEnd < MAX_TIME) {
+            if(tokenEnd < block.timestamp) tokenEnd =  block.timestamp;
+            SlicedToken memory rightSt = SlicedToken({amount: _amount, tokenStart: tokenEnd, tokenEnd: MAX_TIME, next: 0});
+            _addSliceToBalance(_from, rightSt); 
+        }
+    }
+
+
     function permit(address owner, address spender, uint value, uint deadline, uint8 v, bytes32 r, bytes32 s) external {
         require(deadline >= block.timestamp, 'ChaingeDex: EXPIRED');
         bytes32 digest = keccak256(
@@ -130,7 +186,7 @@ contract ChaingeDexFRC758 {
         );
         address recoveredAddress = ecrecover(digest, v, r, s);
         require(recoveredAddress != address(0) && recoveredAddress == owner, 'ChaingeDex: INVALID_SIGNATURE');
-        _approve(owner, spender, value);
+        _approve(spender, value);
     }
 
     function _checkRights(bool _has) internal pure {
@@ -219,14 +275,14 @@ contract ChaingeDexFRC758 {
         return timeBalanceOf(account, block.timestamp, MAX_TIME);
     }
 
-    function _approve(address owner, address _spender, uint value) private {
+    function _approve(address _spender, uint value) private {
         require(_spender != msg.sender, "FRC758: wrong approval destination");
         operatorApprovals[msg.sender][_spender] = value;
         emit ApprovalForAll(msg.sender, _spender, value);
     }
 
-    function approve(address owner,  address spender,  uint256 amount) public {
-        _approve(owner, spender, amount);
+    function approve(address spender,  uint256 amount) public {
+        _approve(spender, amount);
     }
 
     function allowance(address _owner, address _spender) public view returns (uint256) {

@@ -23,7 +23,7 @@ async function main() {
 
  const [owner, other] = await hre.ethers.getSigners();
  signers.address = owner.address
-//  console.log('owner:', owner.address)
+  //  console.log('owner:', owner.address)
   // We get the contract to deploy
 
   // const UniswapV2Router02 = await hre.ethers.getContractFactory("UniswapV2Router02");
@@ -46,37 +46,47 @@ async function main() {
   await sleep()
   await approve(uniRouter.address, tokenA, tokenB)
 
+
   await sleep()
   const res = await addLiquidity(uniRouter, tokenA.address, tokenB.address)
 
-  const now = getNow() + 10;
+  const now = getNow() + 100;
 
-  const bal = await tokenA.timeBalanceOf(signers.address, 1619395996, 666666666666); // startTime 必须大于当前时间
+  const bal = await tokenA.balanceOf(signers.address); // startTime 必须大于当前时间
   console.log(' addLiquidity 之后 tokenA balance', parseInt(bal._hex));
   
-  const bal2 = await tokenB.timeBalanceOf(signers.address, 1619395996, 666666666666); // startTime 必须大于当前时间
+  const bal2 = await tokenB.balanceOf(signers.address); // startTime 必须大于当前时间
   console.log(' addLiquidity 之后  tokenB balance', parseInt(bal2._hex));
 
-  await feeToBalance( pair, other.address, owner, )
+  // await feeToBalance( pair, other.address, owner)
+  // await sleep()
+
+  // await swap(uniRouter, tokenA.address, tokenB.address)
+
+  // await checkBalance(tokenA, tokenB)
+
+  // await feeToBalance( pair, other.address, owner, )
+
   await sleep()
-  await swap(uniRouter, tokenA.address, tokenB.address)
 
-  await checkBalance(tokenA, tokenB)
+    // pair 合约给 router合约授权  因为router合约要转用户的流动性token
+    // await tokenA.approve(routerAddress, '10000000000000000000000000000000000')
 
-  await feeToBalance( pair, other.address, owner, )
-
-  await sleep()
   await removeLiquidity(uniRouter, tokenA.address, tokenB.address, 1111111, 1000002507520, 3999990000128)
   await checkBalance(tokenA, tokenB)
 
-  const lpTokenBalance = await feeToBalance( pair, other.address, owner, )
-  console.log(lpTokenBalance);
-  await feeToRemoveLiquidity(uniRouter, tokenA.address, tokenB.address, lpTokenBalance, 0, 0, other.address);
+  // const lpTokenBalance = await feeToBalance( pair, other.address, owner, )
+  // console.log(lpTokenBalance);
+  // await feeToRemoveLiquidity(uniRouter, tokenA.address, tokenB.address, lpTokenBalance, 0, 0, other.address);
 
-  const bal3 = await tokenA.timeBalanceOf(other.address, 1619395996, 666666666666); 
-  const bal4 = await tokenB.timeBalanceOf(other.address, 1619395996, 666666666666); 
-  console.log('feeTo 取出来的A', bal3 )
-  console.log('feeTo 取出来的B', bal4 )
+  // const bal3 = await tokenA.timeBalanceOf(other.address, 1619395996, 666666666666); 
+  // const bal4 = await tokenB.timeBalanceOf(other.address, 1619395996, 666666666666); 
+  // console.log('feeTo 取出来的A', bal3 )
+  // console.log('feeTo 取出来的B', bal4 )
+
+  // 再次充值LP， 切分LPTOken 再 用半段的到期后的LPTOKEN取回自己的流动性。
+
+  testTimeLpToken();
 }
 
 // We recommend this pattern to be able to use async/await everywhere
@@ -128,7 +138,7 @@ async function frc758() {
 
   console.log('tokenA address', tokenA.address);
 
-  await tokenA.mint(signers.address , "1000000000000000000")
+  await tokenA.mint(signers.address , "1000000000000000000000")
 
   const bal = await tokenA.balanceOf(signers.address); // startTime 必须大于当前时间
 
@@ -139,7 +149,7 @@ async function frc758() {
   await tokenB.deployed();
   await sleep()
 
-  await tokenB.mint(signers.address, "4500000000000000000")
+  await tokenB.mint(signers.address, "4500000000000000000000")
   console.log('toeknB address', tokenB.address)
   const bal2 = await tokenB.balanceOf(signers.address); // startTime 必须大于当前时间
   console.log('tokenB balance:', parseInt(bal2._hex))
@@ -167,9 +177,9 @@ async function factory(addr, otherAddress) {
 
 async function createPair(factory, tokenA, tokenB) {
   console.log('start createPair')
-  const pair = await factory.createPair(tokenA.address, tokenB.address, [ 1619395996,666666666666, 1619395996,666666666666]); // 创建个1617212453 到永远的和 1627212453 到永远的。
+  const pair = await factory.createPair(tokenA.address, tokenB.address, [ 1620966014,666666666666, 1620966014,666666666666]); // 创建个1617212453 到永远的和 1627212453 到永远的。
   console.log('end createPair')
-  return factory.getPair(tokenA.address, tokenB.address, [ 1619395996,666666666666, 1619395996,666666666666]);
+  return factory.getPair(tokenA.address, tokenB.address, [ 1620966014,666666666666, 1620966014,666666666666]);
   // return pair
 }
 
@@ -187,11 +197,11 @@ async function router (factory, weth) {
 async function approve(routerAddress, tokenA, tokenB) {
   console.log("approve start");
   // 给路由合约授权
-  await tokenA.setApprovalForAll(routerAddress, true)
+  await tokenA.approve(routerAddress, '10000000000000000000000000000000000')
   console.log("approve end");
   await sleep()
   console.log("approve start");
-  await tokenB.setApprovalForAll(routerAddress, true)
+  await tokenB.approve(routerAddress, '10000000000000000000000000000000000')
   console.log("approve end");
 }
 
@@ -207,7 +217,7 @@ async function addLiquidity(uniRouter, addressA, addressB) {
     "4000000000000",
     signers.address,
     9999999999999,
-    [1619395996, 666666666666,1619395996,666666666666]
+    [1620966014, 666666666666,1620966014,666666666666]
   )
   console.log('addLiquidity 完成');
   return res;
@@ -223,17 +233,19 @@ async function addLiquidity(uniRouter, addressA, addressB) {
         uint deadline
 */ 
 async function removeLiquidity(uniRoute, addressA, addressB, liquidity, amountAMin, amountBMin, to) {
+
+  
   console.log('removeLiquidity start')
   const now = getNow() + 500;
   await uniRoute.removeLiquidity(
     addressA,
     addressB,
     "1999999999000",
-    "999999999000",
-    "399999999000",
+    "100000000000",
+    "100000000000",
     signers.address,
     9999999999999,
-    [1619395996, 666666666666, 1619395996, 666666666666]
+    [1620966014, 666666666666, 1620966014, 666666666666]
   )
   console.log('removeLiquidity success')
 }
@@ -241,29 +253,29 @@ async function removeLiquidity(uniRoute, addressA, addressB, liquidity, amountAM
 async function swap(uniRouter, addressA, addressB) {
   console.log('开始swap');
   const swapResult = await uniRouter.swapTokensForExactTokens(
-    "1000000000000",
-    "3000000000000",
+    "10000000000",
+    "40000000000",
     [addressA, addressB],
     signers.address,
     999999999999,
-    [1619395996, 666666666666, 1619395996, 666666666666]
+    [1620966014, 666666666666, 1620966014, 666666666666]
   )
     console.log('完成了swap');
 }
 
 async function checkBalance(tokenA, tokenB) {
   const now = getNow() + 500;
-  const balanceA = await tokenA.timeBalanceOf(signers.address, 1619395996, 666666666666)
-  const balanceB = await tokenB.timeBalanceOf(signers.address, 1619395996, 666666666666)
+  const balanceA = await tokenA.timeBalanceOf(signers.address, 1620966014, 666666666666)
+  const balanceB = await tokenB.timeBalanceOf(signers.address, 1620966014, 666666666666)
   console.log('然后A 和 B ',parseInt(balanceA._hex), parseInt(balanceB._hex));
 }
 
 async function feeToBalance(pair ,feeToAddress, signersAddress) {
   console.log('feeToAddress', feeToAddress)
    const pairObj = await hre.ethers.getContractAt('ChaingeDexPair', pair, signersAddress)
-   const otherBalance = await pairObj.timeBalanceOf(feeToAddress, 1619395996, 666666666666)
+   const otherBalance = await pairObj.timeBalanceOf(feeToAddress, 1620966014, 666666666666)
    console.log('feeToBalance ',parseInt(otherBalance._hex));
-   const signersBalance = await pairObj.timeBalanceOf(signersAddress.address, 1619395996, 666666666666)
+   const signersBalance = await pairObj.timeBalanceOf(signersAddress.address, 1620966014, 666666666666)
    console.log('signersAddress有多少流动性代币 ',parseInt(signersBalance._hex));
 
   return parseInt(otherBalance._hex)
@@ -280,7 +292,11 @@ async function feeToRemoveLiquidity(uniRoute, addressA, addressB, liquidity, amo
     amountBMin,
     to,
     9999999999999,
-    [1619395996, 666666666666, 1619395996, 666666666666]
+    [1620966014, 666666666666, 1620966014, 666666666666]
   )
   console.log('removeLiquidity success')
+}
+
+async function testTimeLpToken() {
+
 }
