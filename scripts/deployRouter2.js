@@ -9,8 +9,8 @@ async function main() {
     const timer = parseInt(Date.now() / 1000)
     
     const config = {
-        startTime: 1619395996,
-        endTime: 666666666666,
+        startTime: '1619395996',
+        endTime: '18446744073709551615',
         amountA,
         amountB,
         amountC,

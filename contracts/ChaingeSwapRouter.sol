@@ -166,7 +166,6 @@ contract ChaingeSwap is IChaingeDexRouter01 {
             to,
             time
         );
-        // console.log('add::::::---', liquidity);
         emit AddLiquidity(amountA, amountB, to, liquidity);
     }
 
@@ -179,6 +178,8 @@ contract ChaingeSwap is IChaingeDexRouter01 {
             uint256[] memory time
     ) internal returns(uint liquidity) {
         address pair = IChaingeDexFactory(factory).getPair(tokenA, tokenB, time);
+        // console.log('pair:', pair, amountA, amountB);
+        // console.log(time[0], time[1]);
         TransferHelper.safeTransferFrom(tokenA, msg.sender, pair, amountA, time[0], time[1]);
         TransferHelper.safeTransferFrom(tokenB, msg.sender, pair, amountB, time[2], time[3]);
         liquidity = IChaingeDexPair(pair).mint(to, time);

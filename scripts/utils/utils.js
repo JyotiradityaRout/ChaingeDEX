@@ -176,6 +176,7 @@ module.exports.approve = async (routerAddress, tokenA, tokenB) => {
 
 module.exports.addLiquidity = async (signers, uniRouter, addressA, addressB, config) => {
     console.log('-------------- addLiquidity --------------')
+     
     const res = await uniRouter.addLiquidity(
         addressA,
         addressB,
