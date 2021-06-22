@@ -5,12 +5,15 @@ async function main() {
     const [forLiquidity, forSwap] = await hre.ethers.getSigners();
     const amountA = utils.addZero(1, 18);
     const amountB = utils.addZero(45, 17);
+    const amountC = utils.addZero(45, 17);
     const timer = parseInt(Date.now() / 1000)
+    
     const config = {
         startTime: 1619395996,
         endTime: 666666666666,
         amountA,
         amountB,
+        amountC,
         // 流动性充的量
         amountADesired: utils.addZero(1, 12),
         amountBDesired: utils.addZero(4, 12),
@@ -27,19 +30,30 @@ async function main() {
         amountBMin: 0
     }
 
-    const { tokenA, tokenB } = await utils.mint(forLiquidity, forSwap, utils, config)
+    const { tokenA, tokenB, tokenC} = await utils.mint(forLiquidity, forLiquidity, utils, config)
     await sleep()
+
     const { uniswapV2Factory } = await utils.factory(forLiquidity)
     await sleep()
+
     const pair = await utils.createPair(uniswapV2Factory, tokenA, tokenB, config)
+    console.log('pair合约地址:', pair);
     await sleep()
+    
+    // await utils.createPair(uniswapV2Factory, tokenB, tokenC, config)
+    // await sleep()
+
     const uniRouter = await utils.router(uniswapV2Factory.address, tokenA.address)
     await sleep()
+
     await utils.approve(uniRouter.address, tokenA, tokenB)
     const afterMint = await utils.checkBalance(forLiquidity, tokenA, tokenB, config)
     await sleep()
 
-    const res = await utils.addLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, config)
+    const res = await utils.addLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, config) // A and B
+
+    // await utils.addLiquidity(forLiquidity, uniRouter, tokenB.address, tokenC.address, config) // B and C
+
     const afterAddLiquidity = await utils.checkBalance(forLiquidity, tokenA, tokenB, config)
     await sleep()
 
@@ -53,19 +67,33 @@ async function main() {
     console.log(`k: ${k}`)
     console.log(`理论上liquidity的值：${liq}`)
 
-    await utils.removeLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, utils.addZero(1, 12), config)
-    const afterRemoveLiquidity = await utils.checkBalance(forLiquidity, tokenA, tokenB, config)
-    const removeDeltaA = afterRemoveLiquidity[0] - afterAddLiquidity[0]
-    const removeDeltaB = afterRemoveLiquidity[1] - afterAddLiquidity[1]
-    const _k = removeDeltaA * removeDeltaB * Math.pow(deltaA / removeDeltaA, 2)
-    console.log(`TokenA退了: ${removeDeltaA}`)
-    console.log(`TokenB退了: ${removeDeltaB}`)
-    console.log(`removeLiquidity后，k的理论值: ${_k}`)
-    console.log(`result：${k === _k}`)
+
+    // 获取 pair合约的LP token的值
+
+    const chaingeDexPair = await hre.ethers.getContractAt('ChaingeDexPair', pair);
+    // console.log('forLiquidity', forLiquidity.address);
+
+    // const lpBal = await chaingeDexPair.balanceOf(forLiquidity.address)
+    // console.log('我拥有的 LP 数量:',parseInt(lpBal._hex));
+
+    await chaingeDexPair.approve(uniRouter.address, '19999999990000000000000000000000000');
+
+    // await sleep()
+
+    // await utils.removeLiquidity(forLiquidity, uniRouter, tokenA.address, tokenB.address, utils.addZero(1, 10), config)
+    // const afterRemoveLiquidity = await utils.checkBalance(forLiquidity, tokenA, tokenB, config)
+    // const removeDeltaA = afterRemoveLiquidity[0] - afterAddLiquidity[0]
+    // const removeDeltaB = afterRemoveLiquidity[1] - afterAddLiquidity[1]
+    // const _k = removeDeltaA * removeDeltaB * Math.pow(deltaA / removeDeltaA, 2)
+    // console.log(`TokenA退了: ${removeDeltaA}`)
+    // console.log(`TokenB退了: ${removeDeltaB}`)
+    // console.log(`removeLiquidity后，k的理论值: ${_k}`)
+    // console.log(`result：${k === _k}`)
 
     await sleep()
-    await utils.swap(forSwap, uniRouter, tokenA.address, tokenB.address, config)
-    const afterSwap = await utils.checkBalance(forSwap, tokenA, tokenB, config)
+    
+    await utils.swap2(forLiquidity, uniRouter, tokenA.address, tokenB.address, config)
+    const afterSwap = await utils.checkBalance(forLiquidity, tokenA, tokenB, config)
     console.log(`swap后，tokenA的理论值：${k / (deltaB)}`)
     console.log(`result：${k / (deltaB) === deltaA}`)
 
@@ -86,7 +114,7 @@ async function sleep() {
     return new Promise(function (res, rej) {
         setTimeout(() => {
             res()
-        }, 0)
+        },1)
     })
 }
 module.exports.main = main
