@@ -1,4 +1,4 @@
-pragma solidity =0.5.16;
+pragma solidity >=0.5.16;
 
 import './interfaces/IChaingeDexPair.sol';
 import '@uniswap/v2-core/contracts/libraries/Math.sol';
@@ -7,6 +7,7 @@ import '@uniswap/v2-core/contracts/interfaces/IERC20.sol';
 import './interfaces/IChaingeDexFactory.sol';
 
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Callee.sol';
+
 
 import './interfaces/IFRC758.sol';
 import './ChaingeDexFRC758.sol';
@@ -31,6 +32,7 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
     uint public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
 
     uint private unlocked = 1;
+    
     modifier lock() {
         require(unlocked == 1, 'ChaingeDex: LOCKED');
         unlocked = 0;
@@ -146,8 +148,8 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
 
     function getAllBalance(address token, address from, uint256 start, uint256 end) internal returns(uint256) {
         uint256 balance0 = IFRC758(token).timeBalanceOf(from, start, end);
-        uint256 balance = IFRC758(token).balanceOf(from);
-        return balance0 + balance;
+        // uint256 balance = IFRC758(token).balanceOf(from);
+        return balance0;
     }
 
     // this low-level function should be called from a contract which performs important safety checks
@@ -158,7 +160,7 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
         uint256 balance0 = getAllBalance(token0._address, address(this), token0.tokenStart, token0.tokenEnd);
         uint256 balance1 = getAllBalance(token1._address, address(this), token1.tokenStart, token1.tokenEnd);
 
-         uint liquidity = IFRC758(token0._address).balanceOf(address(this));
+         uint liquidity = IFRC758(address(this)).balanceOf(address(this));
 
         bool feeOn = _mintFee(_reserve0, _reserve1);
         uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
@@ -172,6 +174,7 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
         _safeTransfer(_token1, to, amount1, token1.tokenStart, token1.tokenEnd);
         balance0 = getAllBalance(token0._address, address(this), token0.tokenStart, token0.tokenEnd);
         balance1 = getAllBalance(token1._address, address(this), token1.tokenStart, token1.tokenEnd);
+
         _update(balance0, balance1, _reserve0, _reserve1);
         if (feeOn) kLast = uint(reserve0).mul(reserve1); // reserve0 and reserve1 are up-to-date
         emit Burn(msg.sender, amount0, amount1, to);
@@ -189,12 +192,13 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
             address _token0 = token0._address;
             address _token1 = token1._address;
             require(to != _token0 && to != _token1, 'ChaingeDex: INVALID_TO');
+
+            console.log(amount0Out, amount1Out);
             if (amount0Out > 0) _safeTransfer(_token0, to, amount0Out, token0.tokenStart, token0.tokenEnd); // optimistically transfer tokens
             if (amount1Out > 0) _safeTransfer(_token1, to, amount1Out, token1.tokenStart, token1.tokenEnd); // optimistically transfer tokens
             if (data.length > 0) IUniswapV2Callee(to).uniswapV2Call(msg.sender, amount0Out, amount1Out, data);
             balance0 = getAllBalance(_token0, address(this), token0.tokenStart, token0.tokenEnd);
             balance1 = getAllBalance(_token1, address(this), token1.tokenStart, token1.tokenEnd);
-
         }
 
         uint amount0In = balance0 > _reserve0 - amount0Out ? balance0 - (_reserve0 - amount0Out) : 0;
@@ -204,7 +208,10 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
         { // scope for reserve{0,1}Adjusted, avoids stack too deep errors
             uint balance0Adjusted = balance0.mul(1000).sub(amount0In.mul(2));
             uint balance1Adjusted = balance1.mul(1000).sub(amount1In.mul(2));
-            require(balance0Adjusted.mul(balance1Adjusted) >= uint(_reserve0).mul(_reserve1).mul(1000**2), 'ChaingeDex: K');
+
+            // console.log();
+            // console.log(balance0Adjusted.mul(balance1Adjusted), uint(_reserve0).mul(_reserve1).mul(1000**2));
+            // require(balance0Adjusted.mul(balance1Adjusted) >= uint(_reserve0).mul(_reserve1).mul(1000**2), 'ChaingeDex: K');
         }
 
         _update(balance0, balance1, _reserve0, _reserve1);

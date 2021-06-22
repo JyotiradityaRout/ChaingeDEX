@@ -1,8 +1,13 @@
-pragma solidity =0.5.16;
+pragma solidity >=0.5.16;
 
 import '@uniswap/v2-core/contracts/libraries/SafeMath.sol';
 import "@nomiclabs/buidler/console.sol";
 import './interfaces/IFRC758.sol';
+
+// import "@openzeppelin/contracts/utils/introspection/IERC1820Registry.sol";
+
+// IERC777
+
 
 contract ChaingeDexFRC758 is IFRC758 {
     using SafeMath for uint;
@@ -16,12 +21,14 @@ contract ChaingeDexFRC758 is IFRC758 {
     // keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
     bytes32 public constant PERMIT_TYPEHASH = 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9;
 
+    // IERC1820Registry constant internal _ERC1820_REGISTRY = IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
+
     mapping(address => uint) public nonces;
 
     uint256 public constant MAX_TIME = 18446744073709551615;
 
     event Approval(address indexed owner, address indexed spender, uint value);
-    event Transfer(address indexed from, address indexed to, uint value);
+    // event Transfer(address indexed from, address indexed to, uint value);
     event Transfer(address indexed _from, address indexed _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd);
     event ApprovalForAll(address indexed _owner, address indexed _operator, uint256 _approved);
 
@@ -55,12 +62,18 @@ contract ChaingeDexFRC758 is IFRC758 {
                 address(this)
             )
         );
+        
+        // _ERC1820_REGISTRY.setInterfaceImplementer(address(this), keccak256("ERC20Token"), address(this));
     }
 
     function _mint(address _from, uint256 amount) internal {
         _validateAmount(amount);
+        
         balance[_from] = balance[_from].add(amount);
         totalSupply += amount;
+        
+        // _callTokensReceived(msg.sender, address(0), account, amount, userData, operatorData, requireReceptionAck);
+        
         emit Transfer(address(0), _from, amount, 0, MAX_TIME);
     }
 
@@ -93,22 +106,25 @@ contract ChaingeDexFRC758 is IFRC758 {
     }
 
     function transferFrom(address _from, address _to, uint256 amount) public returns (bool) { 
+
         _validateAddress(_from);
         _validateAddress(_to);
         _validateAmount(amount);
 
          if(msg.sender != _from) {
+            console.log('this:::->', msg.sender, operatorApprovals[_from][msg.sender] );
             operatorApprovals[_from][msg.sender] = operatorApprovals[_from][msg.sender].sub(amount);
          }
 
         if(amount <= balance[_from]) {
+
             balance[_from] = balance[_from].sub(amount);
             balance[_to] = balance[_to].add(amount);
 			emit Transfer(_from, _to, amount, 0, MAX_TIME);
             return true;
         }
 
-        uint256 _amount = amount.sub(balance[_from]);        
+        uint256 _amount = amount.sub(balance[_from]);
         balance[_from] = 0;
 
         SlicedToken memory st = SlicedToken({amount: _amount, tokenStart: block.timestamp, tokenEnd: MAX_TIME, next: 0});
@@ -138,6 +154,7 @@ contract ChaingeDexFRC758 is IFRC758 {
             SlicedToken memory st = SlicedToken({amount: amount, tokenStart: tokenStart, tokenEnd: tokenEnd, next: 0});
             _subSliceFromBalance(_from, st);
             _addSliceToBalance(_to, st);
+            emit Transfer(_from, _to, amount, 0, MAX_TIME);
             return;
         }
 
@@ -153,8 +170,9 @@ contract ChaingeDexFRC758 is IFRC758 {
         change(_from, _amount, tokenStart, tokenEnd);
 
         if(tokenStart <= block.timestamp && tokenEnd == MAX_TIME) {
-             balance[_to] = balance[_to].add(amount);
-             return;
+            balance[_to] = balance[_to].add(amount);
+            emit Transfer(_from, _to, amount, 0, MAX_TIME);
+            return;
         }
         SlicedToken memory toSt = SlicedToken({amount: amount, tokenStart: tokenStart, tokenEnd: tokenEnd, next: 0});
         _addSliceToBalance(_to, toSt); 
@@ -209,34 +227,26 @@ contract ChaingeDexFRC758 is IFRC758 {
 
     function sliceOf(address from) public view returns (uint256[] memory, uint256[] memory, uint256[] memory) {
         _validateAddress(from);
-       uint header = headerIndex[from];
-       if(header == 0) {
-           return (new uint256[](0), new uint256[](0), new uint256[](0));
-       }
-        uint256 count = 0;
-     
-        while(header > 0) {
-            SlicedToken memory st = balances[from][header];
-            if(block.timestamp < st.tokenEnd) {
-                count++;
-            }
-            header = st.next;
+        uint256 header = headerIndex[from];
+        if(header == 0 &&  balance[from] == 0) {
+            return (new uint256[](0), new uint256[](0), new uint256[](0));
         }
-        uint256 allCount = ownedSlicedTokensCount[from];
-        uint256[] memory amountArray = new uint256[](count);
-        uint256[] memory tokenStartArray = new uint256[](count);
-        uint256[] memory tokenEndArray = new uint256[](count);
+        uint256 count = ownedSlicedTokensCount[from];
+
+        uint256[] memory amountArray = new uint256[](count+1);
+        uint256[] memory tokenStartArray = new uint256[](count+1);
+        uint256[] memory tokenEndArray = new uint256[](count +1);
         
-        uint256 i = 0;
-        for (uint256 ii = 1; ii < allCount+1; ii++) {
-            if(block.timestamp >= balances[from][ii].tokenEnd) {
-               continue;
-            }
-            amountArray[i] = balances[from][ii].amount;
-            tokenStartArray[i] = balances[from][ii].tokenStart;
-            tokenEndArray[i] = balances[from][ii].tokenEnd;
-            i++;
+        amountArray[0] = balance[from];
+        tokenStartArray[0] = 0;
+        tokenEndArray[0] = MAX_TIME;
+        
+        for (uint256 ii = 0; ii < count; ii++) {
+            amountArray[ii+1] = balances[from][ii +1].amount;
+            tokenStartArray[ii+1] = balances[from][ii+1].tokenStart;
+            tokenEndArray[ii+1] = balances[from][ii+1].tokenEnd;
         }
+
         return (amountArray, tokenStartArray, tokenEndArray);
     }
 
@@ -272,7 +282,7 @@ contract ChaingeDexFRC758 is IFRC758 {
         return amount;
     }
     function balanceOf(address account) public view returns (uint256) {
-        return timeBalanceOf(account, block.timestamp, MAX_TIME);
+        return timeBalanceOf(account, block.timestamp, MAX_TIME) + balance[account];
     }
 
     function _approve(address _spender, uint value) private {
@@ -522,4 +532,59 @@ contract ChaingeDexFRC758 is IFRC758 {
             _mintSlice(from, minBalance, _tokenStart, tokenEnd);  
         }  
     }
+    
+    /**
+     * @dev Call from.tokensToSend() if the interface is registered
+     * @param operator address operator requesting the transfer
+     * @param from address token holder address
+     * @param to address recipient address
+     * @param amount uint256 amount of tokens to transfer
+     * @param userData bytes extra information provided by the token holder (if any)
+     * @param operatorData bytes extra information provided by the operator (if any)
+     */
+    // function _callTokensToSend(
+    //     address operator,
+    //     address from,
+    //     address to,
+    //     uint256 amount,
+    //     bytes memory userData,
+    //     bytes memory operatorData
+    // )
+    //     private
+    // {
+    //     address implementer = _ERC1820_REGISTRY.getInterfaceImplementer(from, _TOKENS_SENDER_INTERFACE_HASH);
+    //     if (implementer != address(0)) {
+    //         IERC777Sender(implementer).tokensToSend(operator, from, to, amount, userData, operatorData);
+    //     }
+    // }
+
+    /**
+     * @dev Call to.tokensReceived() if the interface is registered. Reverts if the recipient is a contract but
+     * tokensReceived() was not registered for the recipient
+     * @param operator address operator requesting the transfer
+     * @param from address token holder address
+     * @param to address recipient address
+     * @param amount uint256 amount of tokens to transfer
+     * @param userData bytes extra information provided by the token holder (if any)
+     * @param operatorData bytes extra information provided by the operator (if any)
+     * @param requireReceptionAck if true, contract recipients are required to implement ERC777TokensRecipient
+     */
+    // function _callTokensReceived(
+    //     address operator,
+    //     address from,
+    //     address to,
+    //     uint256 amount,
+    //     bytes memory userData,
+    //     bytes memory operatorData,
+    //     bool requireReceptionAck
+    // )
+    //     private
+    // {
+    //     address implementer = _ERC1820_REGISTRY.getInterfaceImplementer(to, _TOKENS_RECIPIENT_INTERFACE_HASH);
+    //     if (implementer != address(0)) {
+    //         IERC777Recipient(implementer).tokensReceived(operator, from, to, amount, userData, operatorData);
+    //     } else if (requireReceptionAck) {
+    //         require(!to.isContract(), "ERC777: token recipient contract has no implementer for ERC777TokensRecipient");
+    //     }
+    // }
 }

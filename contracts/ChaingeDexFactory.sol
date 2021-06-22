@@ -27,16 +27,24 @@ contract ChaingeDexFactory is IChaingeDexFactory {
         (address token0, address token1) = (tokenA, tokenB);
         bytes32 tokenHash = keccak256(abi.encodePacked(token0, token1, time));
 
+        uint256[4] memory time1 = [time[2], time[3], time[0], time[1]];
+
+        bytes32 tokenHash1 = keccak256(abi.encodePacked(token1, token0, time1));
+
         require(token0 != address(0), 'ChaingeDex: ZERO_ADDRESS');
+
         require(_getPair[tokenHash] == address(0), 'ChaingeDex: PAIR_EXISTS');
+        require(_getPair[tokenHash1] == address(0), 'ChaingeDex: PAIR_EXISTS1');
 
         bytes memory bytecode = type(ChaingeDexPair).creationCode;
 
         assembly {
             pair := create(0, add(bytecode, 32), mload(bytecode))
         }
+
         IChaingeDexPair(pair).initialize(token0, token1, time);
         _getPair[tokenHash] = pair;
+        _getPair[tokenHash1] = pair;
         allPairs.push(pair);
         emit PairCreated(token0, token1, pair, allPairs.length);
     }
@@ -54,5 +62,33 @@ contract ChaingeDexFactory is IChaingeDexFactory {
         require(msg.sender == feeToSetter, 'ChaingeDex: FORBIDDEN');
         require(_feeToSetter != address(0), 'ChaingeDex: ZERO_ADDRESS');
         feeToSetter = _feeToSetter;
+    }
+
+
+
+    function createTimePair(address tokenA, address tokenB, uint256[] calldata time) external returns (address pair) {
+        (address token0, address token1) = (tokenA, tokenB);
+        bytes32 tokenHash = keccak256(abi.encodePacked(token0, token1, time));
+
+        uint256[4] memory time1 = [time[2], time[3], time[0], time[1]];
+
+        bytes32 tokenHash1 = keccak256(abi.encodePacked(token1, token0, time1));
+
+        require(token0 != address(0), 'ChaingeDex: ZERO_ADDRESS');
+
+        require(_getPair[tokenHash] == address(0), 'ChaingeDex: PAIR_EXISTS');
+        require(_getPair[tokenHash1] == address(0), 'ChaingeDex: PAIR_EXISTS1');
+
+        bytes memory bytecode = type(ChaingeDexPair).creationCode;
+
+        assembly {
+            pair := create(0, add(bytecode, 32), mload(bytecode))
+        }
+
+        IChaingeDexPair(pair).initialize(token0, token1, time);
+        _getPair[tokenHash] = pair;
+        _getPair[tokenHash1] = pair;
+        allPairs.push(pair);
+        emit PairCreated(token0, token1, pair, allPairs.length);
     }
 }

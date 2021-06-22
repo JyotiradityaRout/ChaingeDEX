@@ -31,7 +31,7 @@ library ChaingeDexLibrary {
     }
     // returns sorted token addresses, used to handle return values from pairs sorted in this order
     function sortTokens(address tokenA, address tokenB) internal pure returns (address token0, address token1) {
-        require(tokenA != tokenB, 'ChaingeDexLibrary: IDENTICAL_ADDRESSES');
+        // require(tokenA != tokenB, 'ChaingeDexLibrary: IDENTICAL_ADDRESSES');
         (token0, token1) =  (tokenA, tokenB);
         require(token0 != address(0), 'ChaingeDexLibrary: ZERO_ADDRESS');
     }
@@ -124,9 +124,11 @@ contract ChaingeSwap is IChaingeDexRouter01 {
         uint256[] memory time
     ) internal virtual returns (uint256 amountA, uint256 amountB) {
         // create the pair if it doesn't exist yet
-        if (IChaingeDexFactory(factory).getPair(tokenA, tokenB, time) == address(0)) {
-            revert();
-        }
+        // if (IChaingeDexFactory(factory).getPair(tokenA, tokenB, time) == address(0)) {
+        //     revert();
+        // }
+        require(IChaingeDexFactory(factory).getPair(tokenA, tokenB, time) != address(0), 'ChaingeDexRouter: pair address = 0');
+
         (uint256 reserveA, uint256 reserveB) = getReserves(factory, tokenA, tokenB, time);
         if (reserveA == 0 && reserveB == 0) {
             (amountA, amountB) = (amountADesired, amountBDesired);
@@ -164,6 +166,8 @@ contract ChaingeSwap is IChaingeDexRouter01 {
             to,
             time
         );
+        // console.log('add::::::---', liquidity);
+        emit AddLiquidity(amountA, amountB, to, liquidity);
     }
 
     function _addLiquidityByTimeSliceToken(
@@ -191,11 +195,20 @@ contract ChaingeSwap is IChaingeDexRouter01 {
         uint256[] memory time
     ) public virtual override ensure(deadline) returns (uint amountA, uint amountB) {
         address pair = IChaingeDexFactory(factory).getPair(tokenA, tokenB, time);
-        IChaingeDexPair(pair).transferFrom(msg.sender, pair, liquidity); // send liquidity to pair
+
+        // console.log(pair, liquidity);
+        //  uint256 l = IChaingeDexPair(pair).balanceOf(msg.sender);
+        // console.log('contact LP token balance:',l);
+
+        IChaingeDexPair(pair).transferFrom(msg.sender, pair, liquidity); // send liquidity to pair  
+
         (uint amount0, uint amount1) = IChaingeDexPair(pair).burn(to, time);
         (amountA, amountB) = (amount0, amount1);
+        
         require(amountA >= amountAMin, 'ChaingeDexRouter: INSUFFICIENT_A_AMOUNT');
         require(amountB >= amountBMin, 'ChaingeDexRouter: INSUFFICIENT_B_AMOUNT');
+
+        emit RemoveLiquidity(amountA, amountB, to, liquidity);
     }
 
     function _swap(uint[] memory amounts, address[] memory path, address _to, uint256[] memory time) internal virtual {
@@ -205,11 +218,14 @@ contract ChaingeSwap is IChaingeDexRouter01 {
             uint amountOut = amounts[i + 1];
             (uint amount0Out, uint amount1Out) = input == token0 ? (uint(0), amountOut) : (amountOut, uint(0));
             address to = i < path.length - 2 ? ChaingeDexLibrary.pairFor(factory, output, path[i + 2], time) : _to;
+
+            // console.log('_swap', input);
             IChaingeDexPair(ChaingeDexLibrary.pairFor(factory, input, output, time)).swap(
                 amount0Out, amount1Out, to, new bytes(0)
             );
         }
     }
+    
     function swapExactTokensForTokens(
         uint amountIn,
         uint amountOutMin,
@@ -239,6 +255,7 @@ contract ChaingeSwap is IChaingeDexRouter01 {
             path[0], msg.sender, ChaingeDexLibrary.pairFor(factory, path[0], path[1], time), amounts[0], time[0], time[1]
         );
         _swap(amounts, path, to, time);
+
     }
     function quote(uint amountA, uint reserveA, uint reserveB) public pure virtual override returns (uint amountB) {
         return ChaingeDexLibrary.quote(amountA, reserveA, reserveB);
