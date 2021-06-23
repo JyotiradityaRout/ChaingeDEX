@@ -25,8 +25,10 @@
   },
   "dependencies": {
     "@nomiclabs/buidler": "^1.4.8",
+    "@openzeppelin/contracts": "^4.1.0",
     "@uniswap/lib": "^4.0.1-alpha",
     "@uniswap/v2-core": "^1.0.1",
-    "@uniswap/v2-periphery": "^1.1.0-beta.0"
+    "@uniswap/v2-periphery": "^1.1.0-beta.0",
+    "hardhat-erc1820": "^0.1.0"
   }
 }

@@ -12,7 +12,7 @@ contract ChaingeDexFactory is IChaingeDexFactory {
 
     address[] public allPairs;
 
-    event PairCreated(address indexed token0, address indexed token1, address pair, uint);
+    event PairCreated(address indexed token0, address indexed token1, address pair, uint, uint256[] time);
 
     constructor(address _feeToSetter) public {
         feeToSetter = _feeToSetter;
@@ -23,11 +23,90 @@ contract ChaingeDexFactory is IChaingeDexFactory {
         return allPairs.length;
     }
     
+    // function createPair(address tokenA, address tokenB, uint256[] calldata time) external returns (address pair) {
+    //     (address token0, address token1) = (tokenA, tokenB);
+
+    //     uint256[] memory _time = new uint256[](4);
+
+    //     // uint256 time0 = time[0];
+    //     // uint256 time1 = time[1];
+    //     // uint256 time2 = time[2];
+    //     // uint256 time3 = time[3];
+
+    //     uint256[] memory _time = time;
+    //     uint256[] memory _timeR = [_time[2], _time[3], _time[0], _time[1]];
+
+    //     bytes32 tokenHash = keccak256(abi.encodePacked(token0, token1, _time)); // 正向的
+    //     bytes32 tokenHashR = keccak256(abi.encodePacked(token1, token0, _timeR)); //反向的
+
+    //     if(tokenA > tokenB) {
+    //         ( token0, token1) =  (tokenB, tokenA);
+    //         tokenHash = keccak256(abi.encodePacked(token0, token1, _time));
+    //         tokenHashR = keccak256(abi.encodePacked(token1, token0, _time));
+
+    //     }else if( tokenA == tokenB) { //时间小的放在前面
+    //         if(time[0] > time[2]) {
+    //             // _time = [time2, time3, time0, time1];
+    //             // _time[0] = time2;
+    //             // _time[1] = time3;
+    //             // _time[2] = time0;
+    //             // _time[3] = time1;
+    //             ( token0, token1) =  (tokenB, tokenA);
+    //         tokenHash = keccak256(abi.encodePacked(token0, token1, _time));
+    //         tokenHashR = keccak256(abi.encodePacked(token1, token0, _time));
+    //         }
+    //     }
+
+    //     bytes32 tokenHash = keccak256(abi.encodePacked(token0, token1, _time));
+
+    //     uint256[4] memory timeR = [_time[2], _time[3], _time[0], _time[1]];
+    //     bytes32 tokenHash1 = keccak256(abi.encodePacked(token1, token0, timeR));
+
+    //     require(token0 != address(0), 'ChaingeDex: ZERO_ADDRESS');
+
+    //     require(_getPair[tokenHash] == address(0), 'ChaingeDex: PAIR_EXISTS');
+    //     require(_getPair[tokenHash1] == address(0), 'ChaingeDex: PAIR_EXISTS1');
+
+    //     bytes memory bytecode = type(ChaingeDexPair).creationCode;
+
+    //     assembly {
+    //         pair := create(0, add(bytecode, 32), mload(bytecode))
+    //     }
+
+    //     IChaingeDexPair(pair).initialize(token0, token1, _time);
+    //     _getPair[tokenHash] = pair;
+    //     _getPair[tokenHash1] = pair;
+    //     allPairs.push(pair);
+    //     emit PairCreated(token0, token1, pair, allPairs.length);
+    // }
+
+    function getPair(address token0, address token1, uint256[] memory time) public view returns(address) {
+        bytes32 tokenHash = keccak256(abi.encodePacked(token0, token1, time));
+        return _getPair[tokenHash];
+    }
+    function setFeeTo(address _feeTo) external {
+        require(msg.sender == feeToSetter, 'ChaingeDex: FORBIDDEN');
+        require(_feeTo != address(0), 'ChaingeDex: ZERO_ADDRESS');
+        feeTo = _feeTo;
+    }
+    function setFeeToSetter(address _feeToSetter) external {
+        require(msg.sender == feeToSetter, 'ChaingeDex: FORBIDDEN');
+        require(_feeToSetter != address(0), 'ChaingeDex: ZERO_ADDRESS');
+        feeToSetter = _feeToSetter;
+    }
+
     function createPair(address tokenA, address tokenB, uint256[] calldata time) external returns (address pair) {
         (address token0, address token1) = (tokenA, tokenB);
-        bytes32 tokenHash = keccak256(abi.encodePacked(token0, token1, time));
 
-        uint256[4] memory time1 = [time[2], time[3], time[0], time[1]];
+        uint256[] memory _time = time;
+        if(tokenA > tokenB) {
+            ( token0, token1) = (tokenB, tokenA);
+            (_time[2], _time[3], _time[0], _time[1]) = (time[0], time[1], time[2], time[3]);
+        }
+
+        bytes32 tokenHash = keccak256(abi.encodePacked(token0, token1, _time));
+
+        uint256[4] memory time1 = [_time[2], _time[3], _time[0], _time[1]];
 
         bytes32 tokenHash1 = keccak256(abi.encodePacked(token1, token0, time1));
 
@@ -46,46 +125,7 @@ contract ChaingeDexFactory is IChaingeDexFactory {
         _getPair[tokenHash] = pair;
         _getPair[tokenHash1] = pair;
         allPairs.push(pair);
-        emit PairCreated(token0, token1, pair, allPairs.length);
+
+        emit PairCreated(token0, token1, pair, allPairs.length, time);
     }
-
-    function getPair(address token0, address token1, uint256[] memory time) public view returns(address) {
-        bytes32 tokenHash = keccak256(abi.encodePacked(token0, token1, time));
-        return _getPair[tokenHash];
-    }
-    function setFeeTo(address _feeTo) external {
-        require(msg.sender == feeToSetter, 'ChaingeDex: FORBIDDEN');
-        require(_feeTo != address(0), 'ChaingeDex: ZERO_ADDRESS');
-        feeTo = _feeTo;
-    }
-    function setFeeToSetter(address _feeToSetter) external {
-        require(msg.sender == feeToSetter, 'ChaingeDex: FORBIDDEN');
-        require(_feeToSetter != address(0), 'ChaingeDex: ZERO_ADDRESS');
-        feeToSetter = _feeToSetter;
-    }
-
-    // function createTimePair(bytes tokenA, bytes tokenB) external returns (address pair) {
-    //     (bytes token0, address tokenB) = (tokenA, tokenB);
-    //     bytes32 tokenHash = keccak256(abi.encodePacked(token0, token1));
-
-    //     // uint256[4] memory time1 = [time[2], time[3], time[0], time[1]];
-
-    //     // bytes32 tokenHash1 = keccak256(abi.encodePacked(token1, token0, time1));
-
-    //     // require(token0 != address(0), 'ChaingeDex: ZERO_ADDRESS');
-
-    //     // require(_getPair[tokenHash] == address(0), 'ChaingeDex: PAIR_EXISTS');
-    //     // require(_getPair[tokenHash1] == address(0), 'ChaingeDex: PAIR_EXISTS1');
-
-    //     bytes memory bytecode = type(ChaingeDexPair).creationCode;
-
-    //     assembly {
-    //         pair := create(0, add(bytecode, 32), mload(bytecode))
-    //     }
-
-    //     IChaingeDexPair(pair).initialize(token0, token1, time);
-    //     _getPair[tokenHash] = pair;
-    //     allPairs.push(pair);
-    //     emit PairCreated(token0, token1, pair, allPairs.length);
-    // }
 }

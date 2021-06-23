@@ -5,7 +5,7 @@ async function sleep() {
     return new Promise(function (res, rej) {
         setTimeout(() => {
             res()
-        }, 1)
+        }, 15000)
     })
 }
 
@@ -79,7 +79,7 @@ module.exports.frc758 = async (_s, config) => {
     await tokenA.deployed();
 
     await sleep()
-    await tokenA.mintTimeSlice(signers.address, config.amountA, config.startTime, config.endTime)
+    await tokenA.mintTimeSlice(signers.address, config.amountA +'0', config.startTime, config.endTime)
     // await tokenA.mintTimeSlice(forSwap.address, config.amountA, config.startTime, config.endTime)
     await sleep()
     console.log('toeknA address:', tokenA.address)
@@ -91,21 +91,12 @@ module.exports.frc758 = async (_s, config) => {
     const tokenB = await FRC758.deploy("TokenB", "F2", 18);
     await tokenB.deployed();
     await sleep()
-    await tokenB.mintTimeSlice(signers.address, config.amountB, config.startTime, config.endTime)
+    await tokenB.mintTimeSlice(signers.address, config.amountB  + '0', config.startTime, config.endTime)
     // await tokenB.mint(forSwap.address, config.amountB)
     console.log('toeknB address:', tokenB.address)
     await sleep()
     const bal2 = await tokenB.timeBalanceOf(signers.address, config.startTime, config.endTime); // startTime 必须大于当前时间
     console.log('tokenB balance:', parseInt(bal2._hex))
-
-    // const tokenC = await FRC758.deploy("TokenC", "F3", 18);
-    // await tokenC.deployed();
-    // await sleep()
-    // await tokenC.mintTimeSlice(signers.address, config.amountC, config.startTime, config.endTime)
-    // // await tokenB.mint(forSwap.address, config.amountB)
-    // console.log('tokenC address:', tokenB.address)
-    // const bal3 = await tokenC.timeBalanceOf(signers.address, config.startTime, config.endTime); // startTime 必须大于当前时间
-    // console.log('tokenC balance:', parseInt(bal3._hex))
 
     return {
         tokenA,
@@ -225,8 +216,8 @@ module.exports.swap = async (signers, uniRouter, addressA, addressB, config) => 
 module.exports.swap2= async (signers, uniRouter, addressA, addressB, config) => {
     // console.log('-------------- swap --------------')
     // const swapResult = await uniRouter.swapExactTokensForTokens(
-    //     config.amountInMax,
-    //     config.amountOut,
+    //     '10000000000000000000',
+    //     '1361156',
     //     [addressA, addressB],
     //     signers.address,
     //     999999999999,
@@ -235,9 +226,10 @@ module.exports.swap2= async (signers, uniRouter, addressA, addressB, config) => 
     // console.log('-------------- swap --------------')
 
     console.log('-------------- swap --------------')
+
     const swapResult = await uniRouter.swapExactTokensForTokens(
-        '400000000',
-        '100000000',
+        '1361156',
+        '8304179445960657795',
         [addressB, addressA],
         signers.address,
         999999999999,

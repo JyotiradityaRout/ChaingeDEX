@@ -112,7 +112,6 @@ contract ChaingeDexFRC758 is IFRC758 {
         _validateAmount(amount);
 
          if(msg.sender != _from) {
-            console.log('this:::->', msg.sender, operatorApprovals[_from][msg.sender] );
             operatorApprovals[_from][msg.sender] = operatorApprovals[_from][msg.sender].sub(amount);
          }
 
@@ -191,7 +190,6 @@ contract ChaingeDexFRC758 is IFRC758 {
             _addSliceToBalance(_from, rightSt); 
         }
     }
-
 
     function permit(address owner, address spender, uint value, uint deadline, uint8 v, bytes32 r, bytes32 s) external {
         require(deadline >= block.timestamp, 'ChaingeDex: EXPIRED');

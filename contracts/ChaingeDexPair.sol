@@ -127,7 +127,6 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
         uint256 balance0 = getAllBalance(token0._address, address(this), time[0], time[1]);
         uint256 balance1 = getAllBalance(token1._address, address(this), time[2], time[3]);
 
-        // console.log('bbbbb', balance0, balance1, address(this));
         uint amount0 = balance0.sub(_reserve0);
         uint amount1 = balance1.sub(_reserve1);
 
@@ -166,12 +165,11 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
         uint256 balance0 = getAllBalance(token0._address, address(this), token0.tokenStart, token0.tokenEnd);
         uint256 balance1 = getAllBalance(token1._address, address(this), token1.tokenStart, token1.tokenEnd);
 
-         uint liquidity = IFRC758(address(this)).balanceOf(address(this));
+        uint liquidity = IFRC758(address(this)).balanceOf(address(this));
 
         bool feeOn = _mintFee(_reserve0, _reserve1);
         uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
 
-        console.log(liquidity, balance0, _totalSupply);
         amount0 = liquidity.mul(balance0) / _totalSupply; // using balances ensures pro-rata distribution
         amount1 = liquidity.mul(balance1) / _totalSupply; // using balances ensures pro-rata distribution
         require(amount0 > 0 && amount1 > 0, 'ChaingeDex: INSUFFICIENT_LIQUIDITY_BURNED');
@@ -199,7 +197,6 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
             address _token1 = token1._address;
             require(to != _token0 && to != _token1, 'ChaingeDex: INVALID_TO');
 
-            console.log(amount0Out, amount1Out);
             if (amount0Out > 0) _safeTransfer(_token0, to, amount0Out, token0.tokenStart, token0.tokenEnd); // optimistically transfer tokens
             if (amount1Out > 0) _safeTransfer(_token1, to, amount1Out, token1.tokenStart, token1.tokenEnd); // optimistically transfer tokens
             if (data.length > 0) IUniswapV2Callee(to).uniswapV2Call(msg.sender, amount0Out, amount1Out, data);
@@ -214,10 +211,8 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
         { // scope for reserve{0,1}Adjusted, avoids stack too deep errors
             uint balance0Adjusted = balance0.mul(1000).sub(amount0In.mul(2));
             uint balance1Adjusted = balance1.mul(1000).sub(amount1In.mul(2));
-
-            // console.log();
             // console.log(balance0Adjusted.mul(balance1Adjusted), uint(_reserve0).mul(_reserve1).mul(1000**2));
-            // require(balance0Adjusted.mul(balance1Adjusted) >= uint(_reserve0).mul(_reserve1).mul(1000**2), 'ChaingeDex: K');
+            require(balance0Adjusted.mul(balance1Adjusted) >= uint(_reserve0).mul(_reserve1).mul(1000**2), 'ChaingeDex: K');
         }
 
         _update(balance0, balance1, _reserve0, _reserve1);

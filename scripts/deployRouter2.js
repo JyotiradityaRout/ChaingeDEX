@@ -3,9 +3,8 @@ const utils = require('./utils/utils');
 
 async function main() {
     const [forLiquidity, forSwap] = await hre.ethers.getSigners();
-    const amountA = utils.addZero(1, 18);
-    const amountB = utils.addZero(45, 17);
-    const amountC = utils.addZero(45, 17);
+    const amountA = '100000000000000000000';
+    const amountB = '15000000';
     const timer = parseInt(Date.now() / 1000)
     
     const config = {
@@ -13,10 +12,9 @@ async function main() {
         endTime: '18446744073709551615',
         amountA,
         amountB,
-        amountC,
         // 流动性充的量
-        amountADesired: utils.addZero(1, 12),
-        amountBDesired: utils.addZero(4, 12),
+        amountADesired: amountA,
+        amountBDesired: amountB,
         // addLiquidity swap两两比例相同
         // addLiquidity
         amountAMin: utils.addZero(1, 12),
@@ -114,7 +112,7 @@ async function sleep() {
     return new Promise(function (res, rej) {
         setTimeout(() => {
             res()
-        },1)
+        }, 15000)
     })
 }
 module.exports.main = main
