@@ -2,7 +2,7 @@ pragma solidity >=0.5.16;
 import './interfaces/IChaingeDexFactory.sol';
 import './ChaingeDexPair.sol';
 
-// import "@nomiclabs/buidler/console.sol";
+import "@nomiclabs/buidler/console.sol";
 
 contract ChaingeDexFactory is IChaingeDexFactory {
     address public feeTo;
@@ -22,63 +22,6 @@ contract ChaingeDexFactory is IChaingeDexFactory {
     function allPairsLength() external view returns (uint) {
         return allPairs.length;
     }
-    
-    // function createPair(address tokenA, address tokenB, uint256[] calldata time) external returns (address pair) {
-    //     (address token0, address token1) = (tokenA, tokenB);
-
-    //     uint256[] memory _time = new uint256[](4);
-
-    //     // uint256 time0 = time[0];
-    //     // uint256 time1 = time[1];
-    //     // uint256 time2 = time[2];
-    //     // uint256 time3 = time[3];
-
-    //     uint256[] memory _time = time;
-    //     uint256[] memory _timeR = [_time[2], _time[3], _time[0], _time[1]];
-
-    //     bytes32 tokenHash = keccak256(abi.encodePacked(token0, token1, _time)); // 正向的
-    //     bytes32 tokenHashR = keccak256(abi.encodePacked(token1, token0, _timeR)); //反向的
-
-    //     if(tokenA > tokenB) {
-    //         ( token0, token1) =  (tokenB, tokenA);
-    //         tokenHash = keccak256(abi.encodePacked(token0, token1, _time));
-    //         tokenHashR = keccak256(abi.encodePacked(token1, token0, _time));
-
-    //     }else if( tokenA == tokenB) { //时间小的放在前面
-    //         if(time[0] > time[2]) {
-    //             // _time = [time2, time3, time0, time1];
-    //             // _time[0] = time2;
-    //             // _time[1] = time3;
-    //             // _time[2] = time0;
-    //             // _time[3] = time1;
-    //             ( token0, token1) =  (tokenB, tokenA);
-    //         tokenHash = keccak256(abi.encodePacked(token0, token1, _time));
-    //         tokenHashR = keccak256(abi.encodePacked(token1, token0, _time));
-    //         }
-    //     }
-
-    //     bytes32 tokenHash = keccak256(abi.encodePacked(token0, token1, _time));
-
-    //     uint256[4] memory timeR = [_time[2], _time[3], _time[0], _time[1]];
-    //     bytes32 tokenHash1 = keccak256(abi.encodePacked(token1, token0, timeR));
-
-    //     require(token0 != address(0), 'ChaingeDex: ZERO_ADDRESS');
-
-    //     require(_getPair[tokenHash] == address(0), 'ChaingeDex: PAIR_EXISTS');
-    //     require(_getPair[tokenHash1] == address(0), 'ChaingeDex: PAIR_EXISTS1');
-
-    //     bytes memory bytecode = type(ChaingeDexPair).creationCode;
-
-    //     assembly {
-    //         pair := create(0, add(bytecode, 32), mload(bytecode))
-    //     }
-
-    //     IChaingeDexPair(pair).initialize(token0, token1, _time);
-    //     _getPair[tokenHash] = pair;
-    //     _getPair[tokenHash1] = pair;
-    //     allPairs.push(pair);
-    //     emit PairCreated(token0, token1, pair, allPairs.length);
-    // }
 
     function getPair(address token0, address token1, uint256[] memory time) public view returns(address) {
         bytes32 tokenHash = keccak256(abi.encodePacked(token0, token1, time));
@@ -99,7 +42,7 @@ contract ChaingeDexFactory is IChaingeDexFactory {
         (address token0, address token1) = (tokenA, tokenB);
 
         uint256[] memory _time = time;
-        if(tokenA > tokenB) {
+        if(tokenA > tokenB || (tokenA == tokenB && time[0] > time[2])) {
             ( token0, token1) = (tokenB, tokenA);
             (_time[2], _time[3], _time[0], _time[1]) = (time[0], time[1], time[2], time[3]);
         }
@@ -114,7 +57,6 @@ contract ChaingeDexFactory is IChaingeDexFactory {
 
         require(_getPair[tokenHash] == address(0), 'ChaingeDex: PAIR_EXISTS');
         require(_getPair[tokenHash1] == address(0), 'ChaingeDex: PAIR_EXISTS1');
-
         bytes memory bytecode = type(ChaingeDexPair).creationCode;
 
         assembly {
