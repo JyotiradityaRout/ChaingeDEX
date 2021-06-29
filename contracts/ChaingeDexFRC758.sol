@@ -7,7 +7,9 @@ import './interfaces/IFRC758.sol';
 // import "@openzeppelin/contracts/utils/introspection/IERC1820Registry.sol";
 
 // IERC777
-
+import './interfaces/IERC1820Registry.sol';
+import './interfaces/IERC777Sender.sol';
+import './interfaces/IERC777Recipient.sol';
 
 contract ChaingeDexFRC758 is IFRC758 {
     using SafeMath for uint;
@@ -21,7 +23,10 @@ contract ChaingeDexFRC758 is IFRC758 {
     // keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
     bytes32 public constant PERMIT_TYPEHASH = 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9;
 
-    // IERC1820Registry constant internal _ERC1820_REGISTRY = IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
+    IERC1820Registry constant internal _ERC1820_REGISTRY = IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
+
+    bytes32 private constant _TOKENS_SENDER_INTERFACE_HASH = keccak256("ERC777TokensSender");
+    bytes32 private constant _TOKENS_RECIPIENT_INTERFACE_HASH = keccak256("ERC777TokensRecipient");
 
     mapping(address => uint) public nonces;
 
@@ -63,7 +68,11 @@ contract ChaingeDexFRC758 is IFRC758 {
             )
         );
         
-        // _ERC1820_REGISTRY.setInterfaceImplementer(address(this), keccak256("ERC20Token"), address(this));
+        _ERC1820_REGISTRY.setInterfaceImplementer(address(this), keccak256("ChaingeDexFRC758"), address(this));
+    }
+
+    function mint(address _from, uint256 amount) public {
+        _mint(_from, amount);
     }
 
     function _mint(address _from, uint256 amount) internal {
@@ -72,7 +81,7 @@ contract ChaingeDexFRC758 is IFRC758 {
         balance[_from] = balance[_from].add(amount);
         totalSupply += amount;
         
-        // _callTokensReceived(msg.sender, address(0), account, amount, userData, operatorData, requireReceptionAck);
+        _callTokensReceived(msg.sender, address(0), _from, amount, "", "", false);
         
         emit Transfer(address(0), _from, amount, 0, MAX_TIME);
     }
@@ -540,21 +549,21 @@ contract ChaingeDexFRC758 is IFRC758 {
      * @param userData bytes extra information provided by the token holder (if any)
      * @param operatorData bytes extra information provided by the operator (if any)
      */
-    // function _callTokensToSend(
-    //     address operator,
-    //     address from,
-    //     address to,
-    //     uint256 amount,
-    //     bytes memory userData,
-    //     bytes memory operatorData
-    // )
-    //     private
-    // {
-    //     address implementer = _ERC1820_REGISTRY.getInterfaceImplementer(from, _TOKENS_SENDER_INTERFACE_HASH);
-    //     if (implementer != address(0)) {
-    //         IERC777Sender(implementer).tokensToSend(operator, from, to, amount, userData, operatorData);
-    //     }
-    // }
+    function _callTokensToSend(
+        address operator,
+        address from,
+        address to,
+        uint256 amount,
+        bytes memory userData,
+        bytes memory operatorData
+    )
+        private
+    {
+        address implementer = _ERC1820_REGISTRY.getInterfaceImplementer(from, _TOKENS_SENDER_INTERFACE_HASH);
+        if (implementer != address(0)) {
+            IERC777Sender(implementer).tokensToSend(operator, from, to, amount, userData, operatorData);
+        }
+    }
 
     /**
      * @dev Call to.tokensReceived() if the interface is registered. Reverts if the recipient is a contract but
@@ -567,22 +576,24 @@ contract ChaingeDexFRC758 is IFRC758 {
      * @param operatorData bytes extra information provided by the operator (if any)
      * @param requireReceptionAck if true, contract recipients are required to implement ERC777TokensRecipient
      */
-    // function _callTokensReceived(
-    //     address operator,
-    //     address from,
-    //     address to,
-    //     uint256 amount,
-    //     bytes memory userData,
-    //     bytes memory operatorData,
-    //     bool requireReceptionAck
-    // )
-    //     private
-    // {
-    //     address implementer = _ERC1820_REGISTRY.getInterfaceImplementer(to, _TOKENS_RECIPIENT_INTERFACE_HASH);
-    //     if (implementer != address(0)) {
-    //         IERC777Recipient(implementer).tokensReceived(operator, from, to, amount, userData, operatorData);
-    //     } else if (requireReceptionAck) {
-    //         require(!to.isContract(), "ERC777: token recipient contract has no implementer for ERC777TokensRecipient");
-    //     }
-    // }
+    function _callTokensReceived(
+        address operator,
+        address from,
+        address to,
+        uint256 amount,
+        bytes memory userData,
+        bytes memory operatorData,
+        bool requireReceptionAck
+    )
+        private
+    {
+        address implementer = _ERC1820_REGISTRY.getInterfaceImplementer(to, _TOKENS_RECIPIENT_INTERFACE_HASH);
+        if (implementer != address(0)) 
+        {
+            IERC777Recipient(implementer).tokensReceived(operator, from, to, amount, userData, operatorData);
+        } 
+        else if (requireReceptionAck) {
+            // require(!to.isContract(), "ERC777: token recipient contract has no implementer for ERC777TokensRecipient");
+        }
+    }
 }

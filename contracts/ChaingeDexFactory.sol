@@ -57,6 +57,9 @@ contract ChaingeDexFactory is IChaingeDexFactory {
 
         require(_getPair[tokenHash] == address(0), 'ChaingeDex: PAIR_EXISTS');
         require(_getPair[tokenHash1] == address(0), 'ChaingeDex: PAIR_EXISTS1');
+
+        require(tokenHash1 != tokenHash, 'ChaingeDex: PAIR_ERROR');
+
         bytes memory bytecode = type(ChaingeDexPair).creationCode;
 
         assembly {

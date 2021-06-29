@@ -68,6 +68,8 @@ contract Minning{
     //       return; // 未设置倍数， 但是这里不能报错，未设置只是不记账而已。
     //   }
 
+    console.log('Minning tokensReceived');
+
     // givers[from] += amount;
     // 1 结算已有的动态计算收益到 amount字段
     settlementReward(from);
@@ -75,7 +77,6 @@ contract Minning{
     addBalance(to, amount);
 
     // balances[from].
-
   }
 
     // 每天的奖励 = 奖励倍数 * 0.0025CHNG * B池子数量 * 用户占池子比例

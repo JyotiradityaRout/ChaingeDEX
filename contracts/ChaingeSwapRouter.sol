@@ -33,14 +33,33 @@ library ChaingeDexLibrary {
     function sortTokens(address tokenA, address tokenB, uint256[] memory time) internal pure returns (address token0, address token1, uint256[] memory _time) {
         // require(tokenA != tokenB, 'ChaingeDexLibrary: IDENTICAL_ADDRESSES');
         _time = new uint256[](4);
-        if(tokenA == tokenB && time[0] > time[2]) {
-            (token0, token1) = (tokenA, tokenB);
-            (_time[0], _time[1], _time[2], _time[3]) = (time[2], time[3], time[0], time[1]);
-        }else {
-            (_time[0], _time[1], _time[2], _time[3]) = (time[0], time[1], time[2], time[3]);
+        // if(tokenA == tokenB && time[0] > time[2]) {
+        //     (token0, token1) = (tokenA, tokenB);
+        //     (_time[0], _time[1], _time[2], _time[3]) = (time[2], time[3], time[0], time[1]);
+        // }else {
+        //     (_time[0], _time[1], _time[2], _time[3]) = (time[0], time[1], time[2], time[3]);
+        // }
+
+        // (token0, token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
+
+        if(tokenA == tokenB ) {
+            if(time[0] > time[2]) {
+                (_time[0], _time[1], _time[2], _time[3]) = (time[2], time[3], time[0], time[1]);
+                (token0, token1) = (tokenB, tokenA);
+            }else {
+                (_time[0], _time[1], _time[2], _time[3]) = (time[0], time[1], time[2], time[3]);
+                (token0, token1) = (tokenA, tokenB);
+            }
+        } else {
+            (token0, token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
+
+            if(token0 == tokenB) {
+                (_time[0], _time[1], _time[2], _time[3]) = (time[2], time[3], time[0], time[1]);
+            }else {
+                (_time[0], _time[1], _time[2], _time[3]) = (time[0], time[1], time[2], time[3]);
+            }
         }
 
-        (token0, token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
         require(token0 != address(0), 'ChaingeDexLibrary: ZERO_ADDRESS');
     }
 
@@ -48,21 +67,38 @@ library ChaingeDexLibrary {
         // require(tokenA != tokenB, 'ChaingeDexLibrary: IDENTICAL_ADDRESSES');
         _time = new uint256[](4);
     
-        if(tokenA == tokenB && startTimeA > startTimeB) {
-            (token0, token1) = (tokenA, tokenB);
-            (_time[0], _time[1], _time[2], _time[3]) = (startTimeB, endTimeB, startTimeA, endTimeA);
-        }else {
-            (_time[0], _time[1], _time[2], _time[3]) = (startTimeA, endTimeA, startTimeB, endTimeB);
+        // if(tokenA == tokenB && startTimeA > startTimeB) {
+        //     (token0, token1) = (tokenA, tokenB);
+        //     (_time[0], _time[1], _time[2], _time[3]) = (startTimeB, endTimeB, startTimeA, endTimeA);
+        // }else {
+        //     (_time[0], _time[1], _time[2], _time[3]) = (startTimeA, endTimeA, startTimeB, endTimeB);
+        // }
+
+        // (token0, token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
+
+        if(tokenA == tokenB ) {
+            if(startTimeA > startTimeB) {
+                (_time[0], _time[1], _time[2], _time[3]) = (startTimeB, endTimeB, startTimeA, endTimeA);
+                (token0, token1) = (tokenB, tokenA);
+            }else {
+                (_time[0], _time[1], _time[2], _time[3]) = (startTimeA, endTimeA, startTimeB, endTimeB);
+                (token0, token1) = (tokenA, tokenB);
+            }
+        } else {
+            (token0, token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
+             if(token0 == tokenB) {
+                (_time[0], _time[1], _time[2], _time[3]) = (startTimeB, endTimeB, startTimeA, endTimeA);
+            }else {
+                 (_time[0], _time[1], _time[2], _time[3]) =  (startTimeA, endTimeA, startTimeB, endTimeB);
+            }
         }
 
-        (token0, token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
         require(token0 != address(0), 'ChaingeDexLibrary: ZERO_ADDRESS');
     }
         // fetches and sorts the reserves for a pair
     function getReserves(address factory, address tokenA, address tokenB, uint256[] memory time) internal view returns (uint reserveA, uint reserveB) {
-        (address token0, address token1, uint256[] memory _time) = sortTokens(tokenA, tokenB, time);
-        //  console.log('getReserves', tokenA, tokenB);
-        // console.log('getReserves', pairFor(factory, tokenA, tokenB, _time));
+        (address token0, address token1, uint256[] memory _time) = sortTokens2(tokenA, tokenB, time[0], time[1], time[2], time[3]);
+
         (uint reserve0, uint reserve1,) = IChaingeDexPair(pairFor(factory, tokenA, tokenB, _time)).getReserves();
         (reserveA, reserveB) = tokenA == token0 ? (reserve0, reserve1) : (reserve1, reserve0);
     }
@@ -98,7 +134,7 @@ library ChaingeDexLibrary {
         require(path.length >= 2, 'ChaingeDexLibrary: INVALID_PATH');
         amounts = new uint[](path.length);
         amounts[0] = amountIn;
-        console.log('path:',path[0], path[1], path[2]);
+        // console.log('path:',path[0], path[1]);
         for (uint i; i < path.length - 1; i++) {
             (uint reserveIn, uint reserveOut) = getReserves(factory, path[i], path[i + 1], time);
             console.log('getAmountsOut', amounts[i], reserveIn,reserveOut);
@@ -138,9 +174,11 @@ contract ChaingeSwap is IChaingeDexRouter01 {
     function getReserves(address factory, address tokenA, address tokenB, uint256[] memory time) internal view returns (uint reserveA, uint reserveB) {
           console.log('aaaa2');
         (address token0,address token1, uint256[] memory _time) = ChaingeDexLibrary.sortTokens(tokenA, tokenB, time);
-          console.log('aaaa2');
+          console.log('aaaa2', tokenA, tokenB);
          address pair = IChaingeDexFactory(factory).getPair(tokenA, tokenB, _time);
+            console.log('aaaa2', pair, _time[0]);
         (uint reserve0, uint reserve1,) = IChaingeDexPair(pair).getReserves();
+         console.log('aaaa2');
         (reserveA, reserveB) = tokenA == token0 ? (reserve0, reserve1) : (reserve1, reserve0);
     }
 
@@ -158,11 +196,12 @@ contract ChaingeSwap is IChaingeDexRouter01 {
         // if (IChaingeDexFactory(factory).getPair(tokenA, tokenB, time) == address(0)) {
         //     revert();
         // }
-       
+
         require(IChaingeDexFactory(factory).getPair(tokenA, tokenB, time) != address(0), 'ChaingeDexRouter: pair address = 0');
         (uint256 reserveA, uint256 reserveB) = getReserves(factory, tokenA, tokenB, time);
         // console.log(reserveA, reserveB);
 
+        
         if (reserveA == 0 && reserveB == 0) {
             (amountA, amountB) = (amountADesired, amountBDesired);
         } else {
@@ -190,7 +229,9 @@ contract ChaingeSwap is IChaingeDexRouter01 {
         uint256 deadline,
         uint256[] memory time
     ) public virtual override ensure(deadline) returns (uint256 amountA, uint256 amountB, uint256 liquidity) {
+
         (amountA, amountB) = _addLiquidity(tokenA, tokenB, amountADesired, amountBDesired, amountAMin, amountBMin, time);
+    
         liquidity = _addLiquidityByTimeSliceToken(
             tokenA,
             tokenB,
@@ -211,9 +252,7 @@ contract ChaingeSwap is IChaingeDexRouter01 {
             uint256[] memory time
     ) internal returns(uint liquidity) {
         address pair = IChaingeDexFactory(factory).getPair(tokenA, tokenB, time);
-        // console.log('aaadd', tokenA, pair, amountA);
         TransferHelper.safeTransferFrom(tokenA, msg.sender, pair, amountA, time[0], time[1]);
-        //  console.log('aaadd');
         TransferHelper.safeTransferFrom(tokenB, msg.sender, pair, amountB, time[2], time[3]);
         liquidity = IChaingeDexPair(pair).mint(to, time);
     }
@@ -233,12 +272,15 @@ contract ChaingeSwap is IChaingeDexRouter01 {
         IChaingeDexPair(pair).transferFrom(msg.sender, pair, liquidity); // send liquidity to pair  
 
         (uint amount0, uint amount1) = IChaingeDexPair(pair).burn(to, time);
-        (amountA, amountB) = (amount0, amount1);
+        
+        (address token0,,) = ChaingeDexLibrary.sortTokens2(tokenA, tokenB, time[0], time[1],time[2],time[3]);
+
+        (amountA, amountB) = tokenA == token0 ? (amount0, amount1) : (amount1, amount0);
         
         require(amountA >= amountAMin, 'ChaingeDexRouter: INSUFFICIENT_A_AMOUNT');
         require(amountB >= amountBMin, 'ChaingeDexRouter: INSUFFICIENT_B_AMOUNT');
 
-        emit RemoveLiquidity(amountA, amountB, to, liquidity);
+        emit RemoveLiquidity(amountA, amountB, liquidity);
     }
 
     function _swap(uint[] memory amounts, address[] memory path, address _to, uint256[] memory time) internal virtual {
@@ -262,7 +304,7 @@ contract ChaingeSwap is IChaingeDexRouter01 {
             // console.log('aaaaa', time[i*2],  time[i*2 +1], time[i*2 +2]);
             // console.log(time[i*2 +3]);
             
-            (address token0,address token1,  uint256[] memory _time) = ChaingeDexLibrary.sortTokens2(input, output, time[i*2],  time[i*2 +1],  time[i*2 +2],  time[i*2+3]);
+            (address token0, address token1,  uint256[] memory _time) = ChaingeDexLibrary.sortTokens2(input, output, time[i*2],  time[i*2 +1],  time[i*2 +2],  time[i*2+3]);
             uint amountOut = amounts[i + 1];
             (uint amount0Out, uint amount1Out) = input == token0 ? (uint(0), amountOut) : (amountOut, uint(0));
             address to = i < path.length - 2 ? ChaingeDexLibrary.pairFor(factory, output, path[i + 2], _time) : _to;
@@ -272,6 +314,7 @@ contract ChaingeSwap is IChaingeDexRouter01 {
             );
         }
     }
+
     
     function swapExactTokensForTokens(
         uint amountIn,
@@ -281,13 +324,13 @@ contract ChaingeSwap is IChaingeDexRouter01 {
         uint deadline,
         uint256[] calldata time
     ) external virtual override ensure(deadline) returns (uint[] memory amounts) {
-        // console.log('swap0:',amountIn, amountOutMin);
+        console.log('swap0:',amountIn, amountOutMin);
 
         amounts = ChaingeDexLibrary.getAmountsOut(factory, amountIn, path, time);
 
-        // console.log('swap:', amounts.length);
+        console.log('swap:', amounts.length);
 
-        // console.log('swap:',amounts[amounts.length - 1], amountOutMin);
+        console.log('swap:',amounts[amounts.length - 1], amountOutMin);
         
         require(amounts[amounts.length - 1] >= amountOutMin, 'ChaingeDexRouter: INSUFFICIENT_OUTPUT_AMOUNT');
 
