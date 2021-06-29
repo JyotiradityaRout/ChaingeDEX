@@ -66,11 +66,11 @@ contract ChaingeDexFactory is IChaingeDexFactory {
             pair := create(0, add(bytecode, 32), mload(bytecode))
         }
 
-        IChaingeDexPair(pair).initialize(token0, token1, time);
+        IChaingeDexPair(pair).initialize(token0, token1, _time);
         _getPair[tokenHash] = pair;
         _getPair[tokenHash1] = pair;
         allPairs.push(pair);
 
-        emit PairCreated(token0, token1, pair, allPairs.length, time);
+        emit PairCreated(token0, token1, pair, allPairs.length, _time);
     }
 }

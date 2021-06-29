@@ -1,7 +1,7 @@
 pragma solidity >=0.6.2;
 
 interface IChaingeDexRouter01 {
-    event AddLiquidity(uint256 amountA, uint256 amountB, address to, uint256 liquidity);
+    event AddLiquidity(uint256 amountA, uint256 amountB, uint256 liquidity);
     event RemoveLiquidity(uint256 amountA, uint256 amountB, uint256 liquidity);
     // event swap();
 

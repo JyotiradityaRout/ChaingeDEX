@@ -77,6 +77,7 @@ contract Minning{
     addBalance(to, amount);
 
     // balances[from].
+
   }
 
     // 每天的奖励 = 奖励倍数 * 0.0025CHNG * B池子数量 * 用户占池子比例

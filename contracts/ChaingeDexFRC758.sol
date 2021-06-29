@@ -81,7 +81,7 @@ contract ChaingeDexFRC758 is IFRC758 {
         balance[_from] = balance[_from].add(amount);
         totalSupply += amount;
         
-        _callTokensReceived(msg.sender, address(0), _from, amount, "", "", false);
+        // _callTokensReceived(msg.sender, address(0), _from, amount, "", "", false);
         
         emit Transfer(address(0), _from, amount, 0, MAX_TIME);
     }
