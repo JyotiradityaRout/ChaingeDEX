@@ -11,7 +11,7 @@ import './interfaces/IERC1820Registry.sol';
 import './interfaces/IERC777Sender.sol';
 import './interfaces/IERC777Recipient.sol';
 
-contract ChaingeDexFRC758 is IFRC758 {
+contract ChaingeDexFRC758 is IFRC758{
     using SafeMath for uint;
     string public constant name = 'ChaingeDex';
     string public constant symbol = 'ChaingeDex';
@@ -25,8 +25,9 @@ contract ChaingeDexFRC758 is IFRC758 {
 
     IERC1820Registry constant internal _ERC1820_REGISTRY = IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
 
-    bytes32 private constant _TOKENS_SENDER_INTERFACE_HASH = keccak256("ERC777TokensSender");
-    bytes32 private constant _TOKENS_RECIPIENT_INTERFACE_HASH = keccak256("ERC777TokensRecipient");
+    bytes32 private constant _TOKENS_SENDER_INTERFACE_HASH = keccak256("ERC777TokensRecipient");
+
+    bytes32 private constant _TOKENS_RECIPIENT_INTERFACE_HASH = keccak256("ChaingeDexFRC758");
 
     mapping(address => uint) public nonces;
 
@@ -67,8 +68,13 @@ contract ChaingeDexFRC758 is IFRC758 {
                 address(this)
             )
         );
-        
-        _ERC1820_REGISTRY.setInterfaceImplementer(address(this), keccak256("ChaingeDexFRC758"), address(this));
+
+        _ERC1820_REGISTRY.setInterfaceImplementer(address(this), keccak256("ERC777Token"), address(this));
+    }
+
+    function setHooks(address hooksAccount) public {
+          console.log(hooksAccount);
+          _ERC1820_REGISTRY.setInterfaceImplementer(address(this), _TOKENS_SENDER_INTERFACE_HASH, hooksAccount);
     }
 
     function mint(address _from, uint256 amount) public {
@@ -76,10 +82,14 @@ contract ChaingeDexFRC758 is IFRC758 {
     }
 
     function _mint(address _from, uint256 amount) internal {
+
         _validateAmount(amount);
         
         balance[_from] = balance[_from].add(amount);
+
         totalSupply += amount;
+
+        // _callTokensToSend(address(this), address(this), _from, amount, "", "");
         
         // _callTokensReceived(msg.sender, address(0), _from, amount, "", "", false);
         
@@ -559,7 +569,10 @@ contract ChaingeDexFRC758 is IFRC758 {
     )
         private
     {
+
         address implementer = _ERC1820_REGISTRY.getInterfaceImplementer(from, _TOKENS_SENDER_INTERFACE_HASH);
+
+        console.log('_callTokensToSend_______', implementer);
         if (implementer != address(0)) {
             IERC777Sender(implementer).tokensToSend(operator, from, to, amount, userData, operatorData);
         }

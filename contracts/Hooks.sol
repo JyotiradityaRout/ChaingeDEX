@@ -1,5 +1,5 @@
 
-pragma solidity =0.5.16;
+pragma solidity >=0.5.16 <0.8.0;
 
 // import "@openzeppelin/contracts/token/ERC777/ERC777.sol";
 // import "@openzeppelin/contracts/introspection/IERC1820Registry.sol";
@@ -8,11 +8,18 @@ pragma solidity =0.5.16;
 // import "@openzeppelin/contracts/introspection/IERC1820Registry.sol";
 import "@nomiclabs/buidler/console.sol";
 import './interfaces/IChaingeDexPair.sol';
+
+import './interfaces/IERC777Recipient.sol';
+import './interfaces/IERC777Sender.sol';
+
+import './ERC1820Implementer.sol';
+import './interfaces/IERC1820Registry.sol';
+
 /*
 *   流动性挖矿合约
     tokensReceived 方法被注册到ERC1820 上，到用户收到了流动性代币，就会触发记账，
 */
-contract Minning{
+contract Minning is IERC777Recipient, IERC777Sender, ERC1820Implementer {
 
     mapping(address => uint) public givers;
 
@@ -22,7 +29,7 @@ contract Minning{
 
     // IERC777 _token;
 
-    // IERC1820Registry private _erc1820 = IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
+    IERC1820Registry private _erc1820 = IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
 
     // keccak256("ERC777TokensRecipient")
     bytes32 constant private TOKENS_RECIPIENT_INTERFACE_HASH =
@@ -42,12 +49,16 @@ contract Minning{
     uint256 public totalAmount;
 
     constructor(address _chaingeDexPair) public {
+
         // _erc1820.setInterfaceImplementer(address(this), TOKENS_RECIPIENT_INTERFACE_HASH, address(this));
+
         _owner = msg.sender;
         // _token = token;
         chaingeDexPair = _chaingeDexPair;
 
         reward[chaingeDexPair] = 40; // 测试
+
+        _registerInterfaceForAddress(TOKENS_RECIPIENT_INTERFACE_HASH, _chaingeDexPair);
     }
 
     function setReward(address pair, uint256 value) public {
@@ -63,11 +74,33 @@ contract Minning{
       uint amount,
       bytes calldata userData,
       bytes calldata operatorData
-  ) external {
+  ) external override {
     //   if(reward[pair] ==0){
     //       return; // 未设置倍数， 但是这里不能报错，未设置只是不记账而已。
     //   }
 
+    console.log('Minning tokensReceived');
+
+    // givers[from] += amount;
+    // 1 结算已有的动态计算收益到 amount字段
+    settlementReward(from);
+    // 2 根据传如的 amount 修改 User的 amount
+    addBalance(to, amount);
+
+    // balances[from].
+  }
+
+  function tokensToSend(
+      address operator,
+      address from,
+      address to,
+      uint amount,
+      bytes calldata userData,
+      bytes calldata operatorData
+  ) external override {
+    //   if(reward[pair] ==0){
+    //       return; // 未设置倍数， 但是这里不能报错，未设置只是不记账而已。
+    //   }
     console.log('Minning tokensReceived');
 
     // givers[from] += amount;
