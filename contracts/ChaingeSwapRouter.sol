@@ -175,7 +175,11 @@ contract ChaingeSwap is IChaingeDexRouter01 {
         (address token0,address token1, uint256[] memory _time) = ChaingeDexLibrary.sortTokens(tokenA, tokenB, time);
          address pair = IChaingeDexFactory(factory).getPair(tokenA, tokenB, _time);
         (uint reserve0, uint reserve1,) = IChaingeDexPair(pair).getReserves();
-        (reserveA, reserveB) = tokenA == token0 ? (reserve0, reserve1) : (reserve1, reserve0);
+        if(tokenA != tokenB) {
+            (reserveA, reserveB) = tokenA == token0 ? (reserve0, reserve1) : (reserve1, reserve0);
+        }else {
+            (reserveA, reserveB) = time[0] == _time[0] ? (reserve0, reserve1) : (reserve1, reserve0);
+        }
     }
 
     // **** ADD LIQUIDITY ****
@@ -196,7 +200,8 @@ contract ChaingeSwap is IChaingeDexRouter01 {
         require(IChaingeDexFactory(factory).getPair(tokenA, tokenB, time) != address(0), 'ChaingeDexRouter: pair address = 0');
         (uint256 reserveA, uint256 reserveB) = getReserves(factory, tokenA, tokenB, time);
 
-        
+        // console.log('_addLiquidity:', reserveA, reserveB);
+
         if (reserveA == 0 && reserveB == 0) {
             (amountA, amountB) = (amountADesired, amountBDesired);
         } else {
