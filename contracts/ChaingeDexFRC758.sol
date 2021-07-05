@@ -25,9 +25,9 @@ contract ChaingeDexFRC758 is IFRC758{
 
     IERC1820Registry constant internal _ERC1820_REGISTRY = IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
 
-    bytes32 private constant _TOKENS_SENDER_INTERFACE_HASH = keccak256("ERC777TokensRecipient");
+    bytes32 private constant _TOKENS_SENDER_INTERFACE_HASH = keccak256("ERC777TokensSender");
 
-    bytes32 private constant _TOKENS_RECIPIENT_INTERFACE_HASH = keccak256("ChaingeDexFRC758");
+    bytes32 private constant _TOKENS_RECIPIENT_INTERFACE_HASH = keccak256("ERC777TokensRecipient");
 
     mapping(address => uint) public nonces;
 
@@ -69,17 +69,19 @@ contract ChaingeDexFRC758 is IFRC758{
             )
         );
 
-        _ERC1820_REGISTRY.setInterfaceImplementer(address(this), keccak256("ERC777Token"), address(this));
+        // _ERC1820_REGISTRY.setInterfaceImplementer(address(this), keccak256("ERC777Token"), address(this));
     }
 
-    function setHooks(address hooksAccount) public {
-          console.log(hooksAccount);
-          _ERC1820_REGISTRY.setInterfaceImplementer(address(this), _TOKENS_SENDER_INTERFACE_HASH, hooksAccount);
-    }
+    // function setHooks(address hooksAccount) public {
+    //       console.log(hooksAccount);
+    //       _ERC1820_REGISTRY.setInterfaceImplementer(address(this), _TOKENS_SENDER_INTERFACE_HASH, hooksAccount);
 
-    function mint(address _from, uint256 amount) public {
-        _mint(_from, amount);
-    }
+    //      _ERC1820_REGISTRY.setInterfaceImplementer(address(this), _TOKENS_RECIPIENT_INTERFACE_HASH, hooksAccount);
+    // }
+
+    // function mint(address _from, uint256 amount) public {
+    //     _mint(_from, amount);
+    // }
 
     function _mint(address _from, uint256 amount) internal {
 
@@ -89,9 +91,7 @@ contract ChaingeDexFRC758 is IFRC758{
 
         totalSupply += amount;
 
-        // _callTokensToSend(address(this), address(this), _from, amount, "", "");
-        
-        // _callTokensReceived(msg.sender, address(0), _from, amount, "", "", false);
+        // _callTokensToSend(address(this), address(0), _from, amount, "", "");
         
         emit Transfer(address(0), _from, amount, 0, MAX_TIME);
     }
@@ -101,6 +101,7 @@ contract ChaingeDexFRC758 is IFRC758{
         _validateAmount(amount);
         balance[_from] = balance[_from].sub(amount);
         totalSupply -= amount;
+
         emit Transfer(_from, address(0), amount, 0, MAX_TIME);
     }
 
@@ -194,6 +195,8 @@ contract ChaingeDexFRC758 is IFRC758{
         }
         SlicedToken memory toSt = SlicedToken({amount: amount, tokenStart: tokenStart, tokenEnd: tokenEnd, next: 0});
         _addSliceToBalance(_to, toSt); 
+
+        // _callTokensReceived(msg.sender, _from, _to, amount, "", "", false);
         
         emit Transfer(_from, _to, amount, tokenStart, tokenEnd);
     }
@@ -601,6 +604,8 @@ contract ChaingeDexFRC758 is IFRC758{
         private
     {
         address implementer = _ERC1820_REGISTRY.getInterfaceImplementer(to, _TOKENS_RECIPIENT_INTERFACE_HASH);
+
+          console.log('_callTokensReceived------', implementer);
         if (implementer != address(0)) 
         {
             IERC777Recipient(implementer).tokensReceived(operator, from, to, amount, userData, operatorData);

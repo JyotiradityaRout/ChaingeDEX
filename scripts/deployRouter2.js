@@ -10,7 +10,7 @@ async function main() {
     
     console.log('user:', forLiquidity.address);
     const config = {
-        startTime: '1619395996',
+        startTime: '1625144203',
         endTime: '18446744073709551615',
         amountA,
         amountB,

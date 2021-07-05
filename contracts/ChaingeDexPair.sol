@@ -126,14 +126,12 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
         uint256 balance0 = getAllBalance(token0._address, address(this), time[0], time[1]);
         uint256 balance1 = getAllBalance(token1._address, address(this), time[2], time[3]);
-
         uint amount0 = balance0.sub(_reserve0);
         uint amount1 = balance1.sub(_reserve1);
 
         bool feeOn = _mintFee(_reserve0, _reserve1);
         uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
         if (_totalSupply == 0) {
-
             liquidity = Math.sqrt(amount0.mul(amount1)).sub(MINIMUM_LIQUIDITY);
            _mint(address(0), MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
         } else {
@@ -148,9 +146,23 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
 
     function getAllBalance(address token, address from, uint256 start, uint256 end) internal returns(uint256) {
 
+        // if(token0._address == token1._address) {
+        //     if(start < block.timestamp && end == MAX_TIME) {
+        //         uint256 balance = IFRC758(token).balanceOf(from);
+        //         uint256 balance0 = IFRC758(token).timeBalanceOf(from, start, end);
+        //         return balance - balance0;
+        //     }
+
+        //     uint256 balance0 = IFRC758(token).timeBalanceOf(from, start, end);
+        //     // console.log('timeLockBalance',balance0 );
+        //     return balance0;
+        // }
+
         if(start < block.timestamp && end == MAX_TIME) {
             uint256 balance = IFRC758(token).balanceOf(from);
-            return balance;
+
+             uint256 balance0 = IFRC758(token).timeBalanceOf(from, block.timestamp, end);
+            return balance - balance0;
         }
 
         uint256 balance0 = IFRC758(token).timeBalanceOf(from, start, end);
@@ -190,6 +202,8 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
         require(amount0Out < _reserve0 && amount1Out < _reserve1, 'ChaingeDex: INSUFFICIENT_LIQUIDITY');
 
+        // console.log('swap:_reserve 0 and 1', _reserve0, _reserve1);
+
         uint balance0;
         uint balance1;
         { // scope for _token{0,1}, avoids stack too deep errors
@@ -204,14 +218,22 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
             balance1 = getAllBalance(_token1, address(this), token1.tokenStart, token1.tokenEnd);
         }
 
+        // console.log('swap:amountOut 0 and 1', amount0Out, amount1Out);
+        // console.log('swap:balance', balance0, balance1);
+
         uint amount0In = balance0 > _reserve0 - amount0Out ? balance0 - (_reserve0 - amount0Out) : 0;
         uint amount1In = balance1 > _reserve1 - amount1Out ? balance1 - (_reserve1 - amount1Out) : 0;
+
+        // console.log('swap>>>:', amount0In, amount1In);
 
         require(amount0In > 0 || amount1In > 0, 'ChaingeDex: INSUFFICIENT_INPUT_AMOUNT');
         { // scope for reserve{0,1}Adjusted, avoids stack too deep errors
             uint balance0Adjusted = balance0.mul(1000).sub(amount0In.mul(2));
             uint balance1Adjusted = balance1.mul(1000).sub(amount1In.mul(2));
-            // console.log(balance0Adjusted.mul(balance1Adjusted), uint(_reserve0).mul(_reserve1).mul(1000**2));
+
+            // console.log(balance0Adjusted.mul(balance1Adjusted));
+            // console.log( uint(_reserve0).mul(_reserve1).mul(1000**2));
+
             require(balance0Adjusted.mul(balance1Adjusted) >= uint(_reserve0).mul(_reserve1).mul(1000**2), 'ChaingeDex: K');
         }
 

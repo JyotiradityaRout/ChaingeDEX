@@ -60,6 +60,8 @@ contract ChaingeDexFactory is IChaingeDexFactory {
 
         require(tokenHash1 != tokenHash, 'ChaingeDex: PAIR_ERROR');
 
+        require(!((time[0] > block.timestamp || time[2] > block.timestamp) && (tokenA != tokenB)), 'ChaingeDex: PAIR_ERROR2');
+
         bytes memory bytecode = type(ChaingeDexPair).creationCode;
 
         assembly {

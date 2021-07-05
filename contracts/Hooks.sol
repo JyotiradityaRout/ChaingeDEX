@@ -27,6 +27,8 @@ contract Minning is IERC777Recipient, IERC777Sender, ERC1820Implementer {
 
     address public chaingeDexPair;
 
+    bytes4 private constant SELECTOR = bytes4(keccak256(bytes('transferFrom(address,address,uint256)')));
+
     // IERC777 _token;
 
     IERC1820Registry private _erc1820 = IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
@@ -34,6 +36,8 @@ contract Minning is IERC777Recipient, IERC777Sender, ERC1820Implementer {
     // keccak256("ERC777TokensRecipient")
     bytes32 constant private TOKENS_RECIPIENT_INTERFACE_HASH =
         0xb281fc8c12954d22544db45de3159a39272895b169a852b314f9cc762e44c53b;
+    
+    bytes32 private constant _TOKENS_SENDER_INTERFACE_HASH = keccak256("ERC777TokensSender");
 
     mapping ( address => uint256 ) reward; // 奖励倍数, 奖励倍数设置了，才可以计算收益
 
@@ -59,6 +63,7 @@ contract Minning is IERC777Recipient, IERC777Sender, ERC1820Implementer {
         reward[chaingeDexPair] = 40; // 测试
 
         _registerInterfaceForAddress(TOKENS_RECIPIENT_INTERFACE_HASH, _chaingeDexPair);
+        _registerInterfaceForAddress(_TOKENS_SENDER_INTERFACE_HASH, _chaingeDexPair);
     }
 
     function setReward(address pair, uint256 value) public {
@@ -79,13 +84,13 @@ contract Minning is IERC777Recipient, IERC777Sender, ERC1820Implementer {
     //       return; // 未设置倍数， 但是这里不能报错，未设置只是不记账而已。
     //   }
 
-    console.log('Minning tokensReceived');
+    console.log('Minning tokensReceived', from, to, amount);
 
     // givers[from] += amount;
     // 1 结算已有的动态计算收益到 amount字段
     settlementReward(from);
-    // 2 根据传如的 amount 修改 User的 amount
-    addBalance(to, amount);
+    // // 2 根据传如的 amount 修改 User的 amount
+    subBalance(to, amount);
 
     // balances[from].
   }
@@ -101,7 +106,7 @@ contract Minning is IERC777Recipient, IERC777Sender, ERC1820Implementer {
     //   if(reward[pair] ==0){
     //       return; // 未设置倍数， 但是这里不能报错，未设置只是不记账而已。
     //   }
-    console.log('Minning tokensReceived');
+    console.log('Minning tokensToSend', from, to, amount);
 
     // givers[from] += amount;
     // 1 结算已有的动态计算收益到 amount字段
@@ -109,7 +114,6 @@ contract Minning is IERC777Recipient, IERC777Sender, ERC1820Implementer {
     // 2 根据传如的 amount 修改 User的 amount
     addBalance(to, amount);
 
-    // balances[from].
 
   }
 
@@ -130,14 +134,12 @@ contract Minning is IERC777Recipient, IERC777Sender, ERC1820Implementer {
     // reward = timeDiff * 0.0025 * user.LPAmount / _totalAmount;
     // 奖励倍数  
     _reward = (timeDiff * rewardMultiple * chng * reserve1 * (user.LPAmount  / _totalAmount)) / 1000000000000000;
-
-    // return 0;
   }
 
   // 结算奖励
   function settlementReward(address from) internal {
       User storage user =  balances[from];
-      (,uint reserve1,) = IChaingeDexPair(chaingeDexPair).getReserves();
+      ( uint reserve0, uint reserve1,) = IChaingeDexPair(chaingeDexPair).getReserves();
       uint256 reward = computeReward(from, user, totalAmount , block.timestamp, reserve1, reward[chaingeDexPair]);
       if(reward == 0) {
           return;
@@ -148,11 +150,13 @@ contract Minning is IERC777Recipient, IERC777Sender, ERC1820Implementer {
       user.totalRewardBalance += reward;
   }
 
-    // 余额 = 动态计算出里的余额 + 已结算余额
+    // 收益余额 = 动态计算出里的余额 + 已结算余额
   function balanceOf(address from) view public returns (uint256) {
        User storage user =  balances[from];
 
-      (, uint reserve1,) = IChaingeDexPair(chaingeDexPair).getReserves();
+      // ( uint reserve0, uint reserve1, ) = IChaingeDexPair(chaingeDexPair).getReserves();
+
+      ( uint reserve0, uint reserve1 ) = (100, 100000000000000); // 测试
 
        uint256 reward = computeReward(from, user, totalAmount , block.timestamp, reserve1, reward[chaingeDexPair]);
        return reward + user.rewardBalance;
@@ -169,7 +173,17 @@ contract Minning is IERC777Recipient, IERC777Sender, ERC1820Implementer {
     totalAmount += amount;
 
     if( balances[from].lastSettleTime == 0) {
-        balances[from].lastSettleTime = block.timestamp - 1; // 测试: 把时间往前移 100000 秒
+        balances[from].lastSettleTime = block.timestamp - 10000000; // 测试: 把时间往前移 100000 秒
     }
+  }
+
+  function subBalance(address from, uint256 amount) public {
+     balances[from].LPAmount -= amount;
+     totalAmount -= amount;
+  }
+
+  function _safeTransfer(address token, address to, uint value) private {
+      (bool success, bytes memory data) = token.call(abi.encodeWithSelector(SELECTOR, address(this), to, value));
+      require(success && (data.length == 0 || abi.decode(data, (bool))), 'Minning: TRANSFER_FAILED');
   }
 }

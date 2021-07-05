@@ -34,19 +34,27 @@ async function main() {
 
   // await sleep()
 
-  console.log(minning.address)
-  await lp.setHooks(minning.address);
 
-  // await lp.mint(owner.address, '111111111111111111111111111111111111');
+ 
 
   const Minning = await hre.ethers.getContractFactory("Minning");
 
-  const minning = await Minning.deploy(minning.address);
+  const minning = await Minning.deploy(lp.address);
 
   await minning.deployed();
 
   console.log("minning deployed to:", minning.address);
 
+
+  console.log(minning.address)
+  await lp.setHooks(minning.address);
+
+   await lp.mint(owner.address, '111111111111111111111111111111111111');
+
+   const bal = await minning.balanceOf(owner.address); // 收益余额
+   console.log(bal);
+
+  //  await lp.timeSliceTransferFrom(owner.address, lp.address,  '111111111111111111111111111111111111',  Math.ceil(Date.now() / 1000),  Math.ceil(Date.now() / 1000) + 100000);
 
   // console.log("Greeter deployed to:", minning);
 

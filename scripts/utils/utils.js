@@ -79,7 +79,7 @@ module.exports.frc758 = async (_s, config) => {
     await tokenA.deployed();
 
     await sleep()
-    await tokenA.mintTimeSlice(signers.address, config.amountA +'00000000', config.startTime, config.endTime)
+    await tokenA.mintTimeSlice(signers.address, config.amountA +'0000000000000', config.startTime, config.endTime)
     // await tokenA.mintTimeSlice(forSwap.address, config.amountA, config.startTime, config.endTime)
     await sleep()
     console.log('toeknA address:', tokenA.address)
