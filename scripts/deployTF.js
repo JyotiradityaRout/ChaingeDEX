@@ -41,17 +41,67 @@ async function main() {
     //     })
     // }));
 
+    // await uniRouter.addLiquidity(
+    //     tokenA.address,
+    //     tokenA.address,
+    //     '1000000000000000000',
+    //     '2000000000000000000',
+    //     '1000000000000000000',
+    //     '2000000000000000000',
+    //     signers.address,
+    //     9999999999999,
+    //     [config.startTime, config.endTime, config.TFStartTime, config.TFEndTime]
+    // );
+
+    
+
     await uniRouter.addLiquidity(
         tokenA.address,
         tokenA.address,
-        '500000000000000000000',
-        '600000000000000000000',
-        '500000000000000000000',
-        '600000000000000000000',
+        '2010579449',
+        '696005681',
+        '2010579449',
+        '696005681',
         signers.address,
         9999999999999,
-        [config.startTime, config.endTime, config.TFStartTime, config.TFEndTime]
+        [config.TFStartTime, config.TFEndTime,config.startTime, config.endTime]
     );
+
+    // await uniRouter.addLiquidity(
+    //     tokenA.address,
+    //     tokenA.address,
+    //     '2000000000000000000',
+    //     '1000000000000000000',
+    //     '2000000000000000000',
+    //     '1000000000000000000',
+    //     signers.address,
+    //     9999999999999,
+    //     [config.TFStartTime, config.TFEndTime,config.startTime, config.endTime]
+    // );
+    await sleep()
+    const pairObj = await hre.ethers.getContractAt("ChaingeDexPair", pair, signers);
+
+    const lpBalance = await pairObj.balanceOf(signers.address);
+    console.log('lpBalance', parseInt(lpBalance._hex));
+    await approve(pairObj, uniRouter.address, '100000000000000000000000000000000000000000000');
+
+    // const balA0 = await tokenA.balanceOf(signers.address);
+    // console.log('删除之前 现货:', parseInt(balA0._hex));
+
+    // const balB0 = await tokenA.timeBalanceOf(signers.address, config.TFStartTime,config.TFEndTime);
+    // console.log('删除之前 期货:', parseInt(balB0._hex));
+
+    // await uniRouter.removeLiquidity(
+    //     tokenA.address,
+    //     tokenA.address,
+    //     '1414213562373093100',
+    //     '1999999999999995830',
+    //     '999999999999997915',
+    //     signers.address,
+    //     9999999999999,
+    //     [config.TFStartTime, config.TFEndTime,config.startTime, config.endTime]
+    // )
+
     await sleep()
     const balA = await tokenA.balanceOf(signers.address);
     console.log('交易之前 现货:', parseInt(balA._hex));
@@ -68,8 +118,8 @@ async function main() {
     // }));
 
     await uniRouter.swapExactTokensForTokens(
-        '100000000000000000000',
-        '9881383789',
+        '5775780',
+        '1890222',
         [tokenA.address,  tokenA.address],
         signers.address,
         999999999999,
@@ -110,10 +160,10 @@ async function deployDEX(signers, tokenA, tokenB) {
     console.log('Factory:', uniswapV2Factory.address);
 
     console.log('start createPair')
-    await uniswapV2Factory.createPair(tokenA.address, tokenB.address, [config.startTime, config.endTime, config.TFStartTime, config.TFEndTime]); // 创建个1617212453 到永远的和 1627212453 到永远的。
+    await uniswapV2Factory.createPair(tokenA.address, tokenB.address, [ config.TFStartTime, config.TFEndTime, config.startTime, config.endTime]); // 创建个1617212453 到永远的和 1627212453 到永远的。
     console.log('end createPair')
     await sleep()
-    const pair = await uniswapV2Factory.getPair(tokenA.address, tokenB.address, [config.startTime, config.endTime, config.TFStartTime, config.TFEndTime]);
+    const pair = await uniswapV2Factory.getPair(tokenA.address, tokenB.address, [ config.TFStartTime, config.TFEndTime, config.startTime, config.endTime]);
 
     const Router = await hre.ethers.getContractFactory("ChaingeSwap");
     const uniRouter = await Router.deploy(uniswapV2Factory.address);

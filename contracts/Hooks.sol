@@ -27,6 +27,8 @@ contract Minning is IERC777Recipient, IERC777Sender, ERC1820Implementer {
 
     address public chaingeDexPair;
 
+    address public constant USDT = 0xF85895D097B2C25946BB95C4d11E2F3c035F8f0C;
+
     bytes4 private constant SELECTOR = bytes4(keccak256(bytes('transferFrom(address,address,uint256)')));
 
     // IERC777 _token;
@@ -84,17 +86,18 @@ contract Minning is IERC777Recipient, IERC777Sender, ERC1820Implementer {
     //       return; // 未设置倍数， 但是这里不能报错，未设置只是不记账而已。
     //   }
 
-    console.log('Minning tokensReceived', from, to, amount);
+    // console.log('Minning tokensReceived', from, to, amount);
 
     // givers[from] += amount;
     // 1 结算已有的动态计算收益到 amount字段
-    settlementReward(from);
-    // // 2 根据传如的 amount 修改 User的 amount
-    subBalance(to, amount);
+    // settlementReward(from);
+    // // // 2 根据传如的 amount 修改 User的 amount
+    // subBalance(to, amount);
 
     // balances[from].
   }
 
+  // 只需要监听send就够了。 当mint发送的时候。 全0地址为from， 上账。 当不是全0地址为from，下账。
   function tokensToSend(
       address operator,
       address from,
@@ -108,13 +111,11 @@ contract Minning is IERC777Recipient, IERC777Sender, ERC1820Implementer {
     //   }
     console.log('Minning tokensToSend', from, to, amount);
 
-    // givers[from] += amount;
+    givers[from] += amount;
     // 1 结算已有的动态计算收益到 amount字段
     settlementReward(from);
-    // 2 根据传如的 amount 修改 User的 amount
+    // // 2 根据传如的 amount 修改 User的 amount
     addBalance(to, amount);
-
-
   }
 
     // 每天的奖励 = 奖励倍数 * 0.0025CHNG * B池子数量 * 用户占池子比例
@@ -131,15 +132,18 @@ contract Minning is IERC777Recipient, IERC777Sender, ERC1820Implementer {
     // 每秒的收益为 0.000000002993519;
     uint256 chng = 2993519;
 
-    // reward = timeDiff * 0.0025 * user.LPAmount / _totalAmount;
+    // reward = timeDiff * 0.0025 * user.LPAmount ;
     // 奖励倍数  
-    _reward = (timeDiff * rewardMultiple * chng * reserve1 * (user.LPAmount  / _totalAmount)) / 1000000000000000;
+    // _reward = (timeDiff * rewardMultiple * chng * reserve1 * (user.LPAmount  )) / 1000000000000000;
+    _reward = 0;
   }
 
   // 结算奖励
   function settlementReward(address from) internal {
       User storage user =  balances[from];
-      ( uint reserve0, uint reserve1,) = IChaingeDexPair(chaingeDexPair).getReserves();
+      // ( uint reserve0, uint reserve1,) = IChaingeDexPair(chaingeDexPair).getReserves(); 
+      uint256 reserve1 = IChaingeDexPair(USDT).balanceOf(chaingeDexPair);
+
       uint256 reward = computeReward(from, user, totalAmount , block.timestamp, reserve1, reward[chaingeDexPair]);
       if(reward == 0) {
           return;

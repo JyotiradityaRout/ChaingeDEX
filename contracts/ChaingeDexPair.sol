@@ -146,18 +146,6 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
 
     function getAllBalance(address token, address from, uint256 start, uint256 end) internal returns(uint256) {
 
-        // if(token0._address == token1._address) {
-        //     if(start < block.timestamp && end == MAX_TIME) {
-        //         uint256 balance = IFRC758(token).balanceOf(from);
-        //         uint256 balance0 = IFRC758(token).timeBalanceOf(from, start, end);
-        //         return balance - balance0;
-        //     }
-
-        //     uint256 balance0 = IFRC758(token).timeBalanceOf(from, start, end);
-        //     // console.log('timeLockBalance',balance0 );
-        //     return balance0;
-        // }
-
         if(start < block.timestamp && end == MAX_TIME) {
             uint256 balance = IFRC758(token).balanceOf(from);
 
@@ -176,6 +164,9 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
         address _token1 = token1._address;                             // gas savings
         uint256 balance0 = getAllBalance(token0._address, address(this), token0.tokenStart, token0.tokenEnd);
         uint256 balance1 = getAllBalance(token1._address, address(this), token1.tokenStart, token1.tokenEnd);
+        // console.log('burn: token0', token0.tokenStart, token0.tokenEnd);
+        // console.log('burn: token1', token1.tokenStart, token1.tokenEnd);
+        // console.log('burn:', balance0, balance1);
 
         uint liquidity = IFRC758(address(this)).balanceOf(address(this));
 
@@ -224,7 +215,6 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
         uint amount0In = balance0 > _reserve0 - amount0Out ? balance0 - (_reserve0 - amount0Out) : 0;
         uint amount1In = balance1 > _reserve1 - amount1Out ? balance1 - (_reserve1 - amount1Out) : 0;
 
-        // console.log('swap>>>:', amount0In, amount1In);
 
         require(amount0In > 0 || amount1In > 0, 'ChaingeDex: INSUFFICIENT_INPUT_AMOUNT');
         { // scope for reserve{0,1}Adjusted, avoids stack too deep errors
@@ -232,8 +222,9 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
             uint balance1Adjusted = balance1.mul(1000).sub(amount1In.mul(2));
 
             // console.log(balance0Adjusted.mul(balance1Adjusted));
-            // console.log( uint(_reserve0).mul(_reserve1).mul(1000**2));
+            // console.log(balance0Adjusted, balance1Adjusted);
 
+            // console.log( uint(_reserve0).mul(_reserve1).mul(1000**2));
             require(balance0Adjusted.mul(balance1Adjusted) >= uint(_reserve0).mul(_reserve1).mul(1000**2), 'ChaingeDex: K');
         }
 

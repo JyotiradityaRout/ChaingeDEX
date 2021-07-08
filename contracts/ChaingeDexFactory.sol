@@ -2,11 +2,13 @@ pragma solidity >=0.5.16;
 import './interfaces/IChaingeDexFactory.sol';
 import './ChaingeDexPair.sol';
 
-import "@nomiclabs/buidler/console.sol";
+// import "@nomiclabs/buidler/console.sol";
 
 contract ChaingeDexFactory is IChaingeDexFactory {
     address public feeTo;
     address public feeToSetter;
+        
+    uint256 public constant MAX_TIME = 18446744073709551615;
 
     mapping ( bytes32 => address) _getPair;
 
@@ -41,6 +43,8 @@ contract ChaingeDexFactory is IChaingeDexFactory {
     function createPair(address tokenA, address tokenB, uint256[] calldata time) external returns (address pair) {
         (address token0, address token1) = (tokenA, tokenB);
 
+        require(time[2] < block.timestamp && time[3] == MAX_TIME, 'ChaingeDex: tokenB not full');
+
         uint256[] memory _time = time;
         if(tokenA > tokenB || (tokenA == tokenB && time[0] > time[2])) {
             ( token0, token1) = (tokenB, tokenA);
@@ -68,7 +72,7 @@ contract ChaingeDexFactory is IChaingeDexFactory {
             pair := create(0, add(bytecode, 32), mload(bytecode))
         }
 
-        IChaingeDexPair(pair).initialize(token0, token1, _time);
+        IChaingeDexPair(pair).initialize(token0, token1, time);
         _getPair[tokenHash] = pair;
         _getPair[tokenHash1] = pair;
         allPairs.push(pair);

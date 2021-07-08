@@ -24,7 +24,6 @@ async function main() {
 
 
 
-
  // 直接测试 LP token的合约
   const FRC758 = await hre.ethers.getContractFactory("ChaingeDexFRC758");
 
@@ -34,9 +33,6 @@ async function main() {
 
   // await sleep()
 
-
- 
-
   const Minning = await hre.ethers.getContractFactory("Minning");
 
   const minning = await Minning.deploy(lp.address);
@@ -45,14 +41,13 @@ async function main() {
 
   console.log("minning deployed to:", minning.address);
 
-
   console.log(minning.address)
   await lp.setHooks(minning.address);
 
-   await lp.mint(owner.address, '111111111111111111111111111111111111');
+  await lp.mint(owner.address, '111111111111111111111111111111111111');
 
-   const bal = await minning.balanceOf(owner.address); // 收益余额
-   console.log(bal);
+  const bal = await minning.balanceOf(owner.address); // 收益余额
+  console.log('收益的余额:', parseInt(bal._hex));
 
   //  await lp.timeSliceTransferFrom(owner.address, lp.address,  '111111111111111111111111111111111111',  Math.ceil(Date.now() / 1000),  Math.ceil(Date.now() / 1000) + 100000);
 
