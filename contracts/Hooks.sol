@@ -109,13 +109,18 @@ contract Minning is IERC777Recipient, IERC777Sender, ERC1820Implementer {
     //   if(reward[pair] ==0){
     //       return; // 未设置倍数， 但是这里不能报错，未设置只是不记账而已。
     //   }
-    console.log('Minning tokensToSend', from, to, amount);
 
-    givers[from] += amount;
-    // 1 结算已有的动态计算收益到 amount字段
-    settlementReward(from);
-    // // 2 根据传如的 amount 修改 User的 amount
-    addBalance(to, amount);
+    if(from == address(0)) { // mint
+      console.log('Minning tokensToSend', to, amount);
+
+      givers[from] += amount;
+      // 1 结算已有的动态计算收益到 amount字段
+      // settlementReward(to);
+      // // 2 根据传如的 amount 修改 User的 amount
+      addBalance(to, amount);
+    } else {
+
+    }
   }
 
     // 每天的奖励 = 奖励倍数 * 0.0025CHNG * B池子数量 * 用户占池子比例
@@ -134,8 +139,8 @@ contract Minning is IERC777Recipient, IERC777Sender, ERC1820Implementer {
 
     // reward = timeDiff * 0.0025 * user.LPAmount ;
     // 奖励倍数  
-    // _reward = (timeDiff * rewardMultiple * chng * reserve1 * (user.LPAmount  )) / 1000000000000000;
-    _reward = 0;
+    _reward = (timeDiff * rewardMultiple * chng * reserve1 * (user.LPAmount  )) / 1000000000000000;
+    // _reward = 0;
   }
 
   // 结算奖励
@@ -160,10 +165,13 @@ contract Minning is IERC777Recipient, IERC777Sender, ERC1820Implementer {
 
       // ( uint reserve0, uint reserve1, ) = IChaingeDexPair(chaingeDexPair).getReserves();
 
-      ( uint reserve0, uint reserve1 ) = (100, 100000000000000); // 测试
+      // ( uint reserve0, uint reserve1 ) = (100, 100000000000000); // 测试
+      
+      // uint256 reserve1 = IChaingeDexPair(USDT).balanceOf(chaingeDexPair);
 
-       uint256 reward = computeReward(from, user, totalAmount , block.timestamp, reserve1, reward[chaingeDexPair]);
-       return reward + user.rewardBalance;
+      //  uint256 reward = computeReward(from, user, totalAmount , block.timestamp, reserve1, reward[chaingeDexPair]);
+      //  return reward + user.rewardBalance;
+      return 0;
   }
 
     // 提取余额 

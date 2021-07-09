@@ -375,7 +375,9 @@ contract ChaingeSwap is IChaingeDexRouter01 {
                 require(time[i] <= block.timestamp, 'ChaingeDexRouter: Do not allow futures trading in routing mode');
             }
         }
-      
+
+        // console.log('swapExactTokensForTokens', amountIn, amounts[amounts.length - 1] , amountOutMin);
+
         require(amounts[amounts.length - 1] >= amountOutMin, 'ChaingeDexRouter: INSUFFICIENT_OUTPUT_AMOUNT');
 
         uint256[] memory _time = new uint256[](4);
