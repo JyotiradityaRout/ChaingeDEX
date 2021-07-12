@@ -65,16 +65,13 @@ contract ChaingeDexFRC758 is IFRC758{
                 address(this)
             )
         );
-
         // _ERC1820_REGISTRY.setInterfaceImplementer(address(this), keccak256("ERC777Token"), address(this));
     }
 
-    function setHooks(address hooksAccount) public {
-        //   console.log(hooksAccount);
-        _ERC1820_REGISTRY.setInterfaceImplementer(address(this), _TOKENS_SENDER_INTERFACE_HASH, hooksAccount);
-
-        _ERC1820_REGISTRY.setInterfaceImplementer(address(this), _TOKENS_RECIPIENT_INTERFACE_HASH, hooksAccount);
-    }
+    // function setHooks(address hooksAccount) public  {
+    //     _ERC1820_REGISTRY.setInterfaceImplementer(address(this), _TOKENS_SENDER_INTERFACE_HASH, hooksAccount);
+    //     // _ERC1820_REGISTRY.setInterfaceImplementer(address(this), _TOKENS_RECIPIENT_INTERFACE_HASH, hooksAccount);
+    // }
 
     // function mint(address _from, uint256 amount) public {
     //     _mint(_from, amount);

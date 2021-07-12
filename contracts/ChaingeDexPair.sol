@@ -22,6 +22,8 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
     // safeTransferFrom(address _from, address _to, uint256 amount, uint256 tokenStart, uint256 tokenEnd) 
     bytes4 private constant SELECTOR = bytes4(keccak256(bytes('timeSliceTransferFrom(address,address,uint256,uint256,uint256)')));
 
+    bytes32 private constant _TOKENS_SENDER_INTERFACE_HASH = keccak256("ERC777TokensSender");
+
     address public factory;
     uint112 private reserve0;           // uses single storage slot, accessible via getReserves
     uint112 private reserve1;           // uses single storage slot, accessible via getReserves
@@ -38,6 +40,17 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
         unlocked = 0;
         _;
         unlocked = 1;
+    }
+
+    modifier admin() {
+        address feeToSetter = IChaingeDexFactory(factory).feeToSetter();
+        require(feeToSetter == msg.sender, 'ChaingeDex: require sender is feeToSetter');
+        _;
+    }
+
+    function setHooks(address hooksAccount) public admin  {
+        console.log('setHooks', hooksAccount);
+        _ERC1820_REGISTRY.setInterfaceImplementer(address(this), _TOKENS_SENDER_INTERFACE_HASH, hooksAccount);
     }
 
     function getReserves() public view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast) {
@@ -76,6 +89,7 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
 
     SliceAccount public token0;
     SliceAccount public token1;
+    
 
     // called once by the factory at time of deployment
     function initialize(address _token0, address _token1, uint256[] calldata time) external {
@@ -122,10 +136,10 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
     }
 
     // this low-level function should be called from a contract which performs important safety checks
-    function mint(address to, uint256[] calldata time) external lock returns (uint liquidity) {
+    function mint(address to) external lock returns (uint liquidity) {
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
-        uint256 balance0 = getAllBalance(token0._address, address(this), time[0], time[1]);
-        uint256 balance1 = getAllBalance(token1._address, address(this), time[2], time[3]);
+        uint256 balance0 = getAllBalance(token0._address, address(this), token0.tokenStart, token0.tokenEnd);
+        uint256 balance1 = getAllBalance(token1._address, address(this), token1.tokenStart, token1.tokenEnd);
         uint amount0 = balance0.sub(_reserve0);
         uint amount1 = balance1.sub(_reserve1);
 
@@ -158,7 +172,7 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
     }
 
     // this low-level function should be called from a contract which performs important safety checks
-    function burn(address to, uint256[] calldata time) external lock returns (uint amount0, uint amount1) {
+    function burn(address to) external lock returns (uint amount0, uint amount1) {
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
         address _token0 = token0._address;
         address _token1 = token1._address;                             // gas savings
@@ -193,7 +207,9 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
         require(amount0Out < _reserve0 && amount1Out < _reserve1, 'ChaingeDex: INSUFFICIENT_LIQUIDITY');
 
-        // console.log('swap:_reserve 0 and 1', _reserve0, _reserve1);
+        console.log('swap:_reserve 0 and 1', _reserve0, _reserve1);
+
+        console.log(token1.tokenStart, token1.tokenEnd);
 
         uint balance0;
         uint balance1;
@@ -210,7 +226,7 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
         }
 
         // console.log('swap:amountOut 0 and 1', amount0Out, amount1Out);
-        // console.log('swap:balance', balance0, balance1);
+        console.log('pair:balance', balance0, balance1);
 
         uint amount0In = balance0 > _reserve0 - amount0Out ? balance0 - (_reserve0 - amount0Out) : 0;
         uint amount1In = balance1 > _reserve1 - amount1Out ? balance1 - (_reserve1 - amount1Out) : 0;
@@ -221,10 +237,10 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
             uint balance0Adjusted = balance0.mul(1000).sub(amount0In.mul(2));
             uint balance1Adjusted = balance1.mul(1000).sub(amount1In.mul(2));
 
-            // console.log(balance0Adjusted.mul(balance1Adjusted));
-            // console.log(balance0Adjusted, balance1Adjusted);
+            console.log(balance0Adjusted.mul(balance1Adjusted));
+            console.log(balance0Adjusted, balance1Adjusted);
 
-            // console.log( uint(_reserve0).mul(_reserve1).mul(1000**2));
+            console.log( uint(_reserve0).mul(_reserve1).mul(1000**2));
             require(balance0Adjusted.mul(balance1Adjusted) >= uint(_reserve0).mul(_reserve1).mul(1000**2), 'ChaingeDex: K');
         }
 

@@ -15,19 +15,35 @@ import './interfaces/IERC777Sender.sol';
 import './ERC1820Implementer.sol';
 import './interfaces/IERC1820Registry.sol';
 
+library SafeMath {
+    function add(uint x, uint y) internal pure returns (uint z) {
+        require((z = x + y) >= x, 'ds-math-add-overflow');
+    }
+
+    function sub(uint x, uint y) internal pure returns (uint z) {
+        require((z = x - y) <= x, 'ds-math-sub-underflow');
+    }
+
+    function mul(uint x, uint y) internal pure returns (uint z) {
+        require(y == 0 || (z = x * y) / y == x, 'ds-math-mul-overflow');
+    }
+}
+
+// import '@uniswap/v2-core/contracts/libraries/SafeMath.sol';
+
 /*
 *   流动性挖矿合约
     tokensReceived 方法被注册到ERC1820 上，到用户收到了流动性代币，就会触发记账，
 */
 contract Minning is IERC777Recipient, IERC777Sender, ERC1820Implementer {
 
+    using SafeMath for uint256;
+
     mapping(address => uint) public givers;
 
     address public _owner;
 
     address public chaingeDexPair;
-
-    address public constant USDT = 0xF85895D097B2C25946BB95C4d11E2F3c035F8f0C;
 
     bytes4 private constant SELECTOR = bytes4(keccak256(bytes('transferFrom(address,address,uint256)')));
 
@@ -41,7 +57,12 @@ contract Minning is IERC777Recipient, IERC777Sender, ERC1820Implementer {
     
     bytes32 private constant _TOKENS_SENDER_INTERFACE_HASH = keccak256("ERC777TokensSender");
 
-    mapping ( address => uint256 ) reward; // 奖励倍数, 奖励倍数设置了，才可以计算收益
+    // mapping ( address => uint256 ) reward; // 奖励倍数, 奖励倍数设置了，才可以计算收益
+
+    uint256 public rewardValue;
+    uint256 public rewardPairDirection;
+    address public cashbox;
+    address public rewardToken;
 
     struct User{
         uint256 totalRewardBalance; // 总收益
@@ -54,26 +75,45 @@ contract Minning is IERC777Recipient, IERC777Sender, ERC1820Implementer {
 
     uint256 public totalAmount;
 
-    constructor(address _chaingeDexPair) public {
+    modifier onlyOwner() {
+        require(_owner == msg.sender, 'ChaingeDex: require sender is feeToSetter');
+        _;
+    }
 
+    constructor(address _chaingeDexPair, uint256 _rewardValue,  uint256 _rewardPairDirection, address _cashbox, address _rewardToken ) public {
         // _erc1820.setInterfaceImplementer(address(this), TOKENS_RECIPIENT_INTERFACE_HASH, address(this));
-
         _owner = msg.sender;
         // _token = token;
         chaingeDexPair = _chaingeDexPair;
 
-        reward[chaingeDexPair] = 40; // 测试
+        rewardValue = _rewardValue; // 测试
+
+        require(_rewardPairDirection == 0 || _rewardPairDirection == 1, 'Hooks setRewardPairDirection: Invalid value');
+        rewardPairDirection = _rewardPairDirection;
+
+        cashbox = _cashbox;
+
+        rewardToken = _rewardToken;
 
         _registerInterfaceForAddress(TOKENS_RECIPIENT_INTERFACE_HASH, _chaingeDexPair);
         _registerInterfaceForAddress(_TOKENS_SENDER_INTERFACE_HASH, _chaingeDexPair);
     }
 
-    function setReward(address pair, uint256 value) public {
-        reward[pair] = value;
+    function setReward(uint256 value) public onlyOwner {
+       rewardValue = value;
     }
 
-    // 收款时被回调
-    // operator 就是pir合约地址。因此在这里判断是否记账，  reward[pair] == operator;
+    function setRewardPairDirection(uint256 value) public onlyOwner {
+      require(value == 0 || value == 1, 'Hooks setRewardPairDirection: Invalid value');
+      rewardPairDirection = value;
+    }
+
+    function setCashbox(address _cashbox) public onlyOwner {
+        cashbox = _cashbox;
+    }
+
+  //   // 收款时被回调
+  //   // operator 就是pir合约地址。因此在这里判断是否记账，  reward[pair] == operator;
   function tokensReceived(
       address operator,
       address from,
@@ -82,19 +122,6 @@ contract Minning is IERC777Recipient, IERC777Sender, ERC1820Implementer {
       bytes calldata userData,
       bytes calldata operatorData
   ) external override {
-    //   if(reward[pair] ==0){
-    //       return; // 未设置倍数， 但是这里不能报错，未设置只是不记账而已。
-    //   }
-
-    // console.log('Minning tokensReceived', from, to, amount);
-
-    // givers[from] += amount;
-    // 1 结算已有的动态计算收益到 amount字段
-    // settlementReward(from);
-    // // // 2 根据传如的 amount 修改 User的 amount
-    // subBalance(to, amount);
-
-    // balances[from].
   }
 
   // 只需要监听send就够了。 当mint发送的时候。 全0地址为from， 上账。 当不是全0地址为from，下账。
@@ -115,11 +142,13 @@ contract Minning is IERC777Recipient, IERC777Sender, ERC1820Implementer {
 
       givers[from] += amount;
       // 1 结算已有的动态计算收益到 amount字段
-      // settlementReward(to);
+      settlementReward(to);
       // // 2 根据传如的 amount 修改 User的 amount
       addBalance(to, amount);
     } else {
-
+        // 转账出去, 不管你转给谁，都视为移除LP, 这里取form
+        settlementReward(from);
+        subBalance(from, amount); // 减去 amount
     }
   }
 
@@ -146,10 +175,10 @@ contract Minning is IERC777Recipient, IERC777Sender, ERC1820Implementer {
   // 结算奖励
   function settlementReward(address from) internal {
       User storage user =  balances[from];
-      // ( uint reserve0, uint reserve1,) = IChaingeDexPair(chaingeDexPair).getReserves(); 
-      uint256 reserve1 = IChaingeDexPair(USDT).balanceOf(chaingeDexPair);
+      ( uint reserve0, uint reserve1,) = IChaingeDexPair(chaingeDexPair).getReserves(); 
+      uint256 _pool = rewardPairDirection == 0 ? reserve0: reserve1;
 
-      uint256 reward = computeReward(from, user, totalAmount , block.timestamp, reserve1, reward[chaingeDexPair]);
+      uint256 reward = computeReward(from, user, totalAmount, block.timestamp, _pool, rewardValue);
       if(reward == 0) {
           return;
       }
@@ -160,42 +189,44 @@ contract Minning is IERC777Recipient, IERC777Sender, ERC1820Implementer {
   }
 
     // 收益余额 = 动态计算出里的余额 + 已结算余额
-  function balanceOf(address from) view public returns (uint256) {
+  function rewardOf(address from) view public returns (uint256) {
        User storage user =  balances[from];
+      ( uint reserve0, uint reserve1, ) = IChaingeDexPair(chaingeDexPair).getReserves();
 
-      // ( uint reserve0, uint reserve1, ) = IChaingeDexPair(chaingeDexPair).getReserves();
-
-      // ( uint reserve0, uint reserve1 ) = (100, 100000000000000); // 测试
+      uint256 _pool = rewardPairDirection == 0 ? reserve0: reserve1;
       
-      // uint256 reserve1 = IChaingeDexPair(USDT).balanceOf(chaingeDexPair);
-
-      //  uint256 reward = computeReward(from, user, totalAmount , block.timestamp, reserve1, reward[chaingeDexPair]);
-      //  return reward + user.rewardBalance;
-      return 0;
-  }
+       uint256 reward = computeReward(from, user, totalAmount , block.timestamp, _pool, rewardValue);
+       return reward + user.rewardBalance;
+  } 
 
     // 提取余额 
-  function withdraw(address from, uint256 amount) public {
-    
+  function withdraw(uint256 amount) public {
+      User storage user =  balances[msg.sender];
+      settlementReward(msg.sender);
+      require(user.rewardBalance > 0, 'Hooks: rewardBalance = 0');
+
+      _safeTransfer(rewardToken, cashbox, msg.sender, amount);
+
+      user.rewardBalance = user.rewardBalance.sub(amount);
   }
 
   // 添加余额, 测试的时候设置为public从外部调用。 上线后，则不允许外部调用。需要哎回调钩子里调用。
-  function addBalance(address from, uint256 amount) public {
+  function addBalance(address from, uint256 amount) private {
     balances[from].LPAmount += amount;
     totalAmount += amount;
 
     if( balances[from].lastSettleTime == 0) {
-        balances[from].lastSettleTime = block.timestamp - 10000000; // 测试: 把时间往前移 100000 秒
+        balances[from].lastSettleTime = block.timestamp - 0; // 测试: 把时间往前移 100000 秒
     }
   }
 
-  function subBalance(address from, uint256 amount) public {
-     balances[from].LPAmount -= amount;
-     totalAmount -= amount;
+  function subBalance(address from, uint256 amount) private {
+     balances[from].LPAmount = balances[from].LPAmount.sub(amount);
+     totalAmount = totalAmount.sub(amount);
   }
 
-  function _safeTransfer(address token, address to, uint value) private {
-      (bool success, bytes memory data) = token.call(abi.encodeWithSelector(SELECTOR, address(this), to, value));
+  function _safeTransfer(address token, address from, address to, uint value) private {
+      (bool success, bytes memory data) = token.call(abi.encodeWithSelector(SELECTOR, from, to, value));
       require(success && (data.length == 0 || abi.decode(data, (bool))), 'Minning: TRANSFER_FAILED');
   }
 }
