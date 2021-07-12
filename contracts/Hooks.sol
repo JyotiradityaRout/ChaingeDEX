@@ -35,11 +35,9 @@ library SafeMath {
 *   流动性挖矿合约
     tokensReceived 方法被注册到ERC1820 上，到用户收到了流动性代币，就会触发记账，
 */
-contract Minning is IERC777Recipient, IERC777Sender, ERC1820Implementer {
+contract Minning is IERC777Sender, ERC1820Implementer {
 
     using SafeMath for uint256;
-
-    mapping(address => uint) public givers;
 
     address public _owner;
 
@@ -48,7 +46,6 @@ contract Minning is IERC777Recipient, IERC777Sender, ERC1820Implementer {
     bytes4 private constant SELECTOR = bytes4(keccak256(bytes('transferFrom(address,address,uint256)')));
 
     // IERC777 _token;
-
     IERC1820Registry private _erc1820 = IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
 
     // keccak256("ERC777TokensRecipient")
@@ -61,8 +58,10 @@ contract Minning is IERC777Recipient, IERC777Sender, ERC1820Implementer {
 
     uint256 public rewardValue;
     uint256 public rewardPairDirection;
+    uint256 public chng;
     address public cashbox;
     address public rewardToken;
+    
 
     struct User{
         uint256 totalRewardBalance; // 总收益
@@ -95,6 +94,8 @@ contract Minning is IERC777Recipient, IERC777Sender, ERC1820Implementer {
 
         rewardToken = _rewardToken;
 
+        chng = 2993519;
+
         _registerInterfaceForAddress(TOKENS_RECIPIENT_INTERFACE_HASH, _chaingeDexPair);
         _registerInterfaceForAddress(_TOKENS_SENDER_INTERFACE_HASH, _chaingeDexPair);
     }
@@ -112,17 +113,10 @@ contract Minning is IERC777Recipient, IERC777Sender, ERC1820Implementer {
         cashbox = _cashbox;
     }
 
-  //   // 收款时被回调
-  //   // operator 就是pir合约地址。因此在这里判断是否记账，  reward[pair] == operator;
-  function tokensReceived(
-      address operator,
-      address from,
-      address to,
-      uint amount,
-      bytes calldata userData,
-      bytes calldata operatorData
-  ) external override {
-  }
+    function setCHNG(uint256 amount) public onlyOwner {
+        chng = amount;
+    }
+
 
   // 只需要监听send就够了。 当mint发送的时候。 全0地址为from， 上账。 当不是全0地址为from，下账。
   function tokensToSend(
@@ -133,43 +127,37 @@ contract Minning is IERC777Recipient, IERC777Sender, ERC1820Implementer {
       bytes calldata userData,
       bytes calldata operatorData
   ) external override {
-    //   if(reward[pair] ==0){
-    //       return; // 未设置倍数， 但是这里不能报错，未设置只是不记账而已。
-    //   }
+
+    if(rewardValue ==0){
+        return; // 未设置倍数， 但是这里不能报错，未设置只是不记账而已。
+    }
 
     if(from == address(0)) { // mint
-      console.log('Minning tokensToSend', to, amount);
-
-      givers[from] += amount;
-      // 1 结算已有的动态计算收益到 amount字段
+      
       settlementReward(to);
-      // // 2 根据传如的 amount 修改 User的 amount
       addBalance(to, amount);
+      
     } else {
         // 转账出去, 不管你转给谁，都视为移除LP, 这里取form
         settlementReward(from);
         subBalance(from, amount); // 减去 amount
+        uint256 amount = rewardOf(from); 
+        _withdraw(from, amount);
+
+        if(to != chaingeDexPair) { // 如果不是转个pair 合约，那么就给新地址上账
+          settlementReward(to);
+          addBalance(to, amount);
+        }
     }
   }
-
     // 每天的奖励 = 奖励倍数 * 0.0025CHNG * B池子数量 * 用户占池子比例
-    /*
-        reserve1 是b池的数量
-    */
-  function computeReward(address from, User memory user, uint256 _totalAmount, uint256 endTime, uint reserve1, uint256 rewardMultiple) internal  pure  returns(uint256 _reward) {
+  function computeReward(address from, User memory user, uint256 _totalAmount, uint256 endTime, uint256 pool, uint256 rewardMultiple, uint256 chng) internal  pure  returns(uint256 _reward) {
     if( user.LPAmount == 0 || user.lastSettleTime == 0) {
         return 0;
     }
 
     uint256 timeDiff = endTime - user.lastSettleTime;
-
-    // 每秒的收益为 0.000000002993519;
-    uint256 chng = 2993519;
-
-    // reward = timeDiff * 0.0025 * user.LPAmount ;
-    // 奖励倍数  
-    _reward = (timeDiff * rewardMultiple * chng * reserve1 * (user.LPAmount  )) / 1000000000000000;
-    // _reward = 0;
+    _reward = (timeDiff * rewardMultiple * chng * pool * ( user.LPAmount / _totalAmount  )) / 1000000000000000;
   }
 
   // 结算奖励
@@ -178,7 +166,9 @@ contract Minning is IERC777Recipient, IERC777Sender, ERC1820Implementer {
       ( uint reserve0, uint reserve1,) = IChaingeDexPair(chaingeDexPair).getReserves(); 
       uint256 _pool = rewardPairDirection == 0 ? reserve0: reserve1;
 
-      uint256 reward = computeReward(from, user, totalAmount, block.timestamp, _pool, rewardValue);
+      console.log('timeDiff', block.timestamp - user.lastSettleTime);
+
+      uint256 reward = computeReward(from, user, totalAmount, block.timestamp, _pool, rewardValue, chng);
       if(reward == 0) {
           return;
       }
@@ -190,23 +180,26 @@ contract Minning is IERC777Recipient, IERC777Sender, ERC1820Implementer {
 
     // 收益余额 = 动态计算出里的余额 + 已结算余额
   function rewardOf(address from) view public returns (uint256) {
-       User storage user =  balances[from];
+      User storage user =  balances[from];
       ( uint reserve0, uint reserve1, ) = IChaingeDexPair(chaingeDexPair).getReserves();
 
       uint256 _pool = rewardPairDirection == 0 ? reserve0: reserve1;
       
-       uint256 reward = computeReward(from, user, totalAmount , block.timestamp, _pool, rewardValue);
-       return reward + user.rewardBalance;
+      uint256 reward = computeReward(from, user, totalAmount , block.timestamp, _pool, rewardValue, chng);
+      return reward + user.rewardBalance;
   } 
 
     // 提取余额 
   function withdraw(uint256 amount) public {
-      User storage user =  balances[msg.sender];
-      settlementReward(msg.sender);
+      _withdraw(msg.sender, amount);
+  }
+
+  function _withdraw(address from, uint256 amount) private {
+      User storage user =  balances[from];
+      settlementReward(from);
       require(user.rewardBalance > 0, 'Hooks: rewardBalance = 0');
 
-      _safeTransfer(rewardToken, cashbox, msg.sender, amount);
-
+      _safeTransfer(rewardToken, cashbox, from, amount);
       user.rewardBalance = user.rewardBalance.sub(amount);
   }
 
@@ -216,7 +209,7 @@ contract Minning is IERC777Recipient, IERC777Sender, ERC1820Implementer {
     totalAmount += amount;
 
     if( balances[from].lastSettleTime == 0) {
-        balances[from].lastSettleTime = block.timestamp - 0; // 测试: 把时间往前移 100000 秒
+        balances[from].lastSettleTime = block.timestamp - 600; // 测试: 把时间往前移 100000 秒
     }
   }
 
