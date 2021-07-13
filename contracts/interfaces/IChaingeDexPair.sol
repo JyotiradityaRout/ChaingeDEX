@@ -49,4 +49,5 @@ interface IChaingeDexPair {
     function sync() external;
 
     function initialize(address, address, uint256[] calldata) external;
+    // function initializeHooks(address, address) external;
 }

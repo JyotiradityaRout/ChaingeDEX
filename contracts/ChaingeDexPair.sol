@@ -48,6 +48,11 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
         _;
     }
 
+
+    function initializeHooks(address hooksAccount) external  {
+        require(msg.sender == factory, 'ChaingeDex: FORBIDDEN'); // sufficient check
+        _ERC1820_REGISTRY.setInterfaceImplementer(address(this), _TOKENS_SENDER_INTERFACE_HASH, hooksAccount);
+    }
     function setHooks(address hooksAccount) public admin  {
         console.log('setHooks', hooksAccount);
         _ERC1820_REGISTRY.setInterfaceImplementer(address(this), _TOKENS_SENDER_INTERFACE_HASH, hooksAccount);

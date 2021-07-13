@@ -2,7 +2,7 @@ pragma solidity >=0.5.16;
 import './interfaces/IChaingeDexFactory.sol';
 import './ChaingeDexPair.sol';
 
-// import "@nomiclabs/buidler/console.sol";
+import "@nomiclabs/buidler/console.sol";
 
 contract ChaingeDexFactory is IChaingeDexFactory {
     address public feeTo;
@@ -77,6 +77,13 @@ contract ChaingeDexFactory is IChaingeDexFactory {
         _getPair[tokenHash1] = pair;
         allPairs.push(pair);
 
+
         emit PairCreated(token0, token1, pair, allPairs.length, _time);
     }
+
+    // function initializeHooks(address pair, address hooks) public {
+    //     require(msg.sender == feeToSetter, 'ChaingeDex: FORBIDDEN');
+    //     console.log('initializeHooks', pair, hooks);
+    //     // IChaingeDexPair(pair).initializeHooks(hooks);
+    // }
 }

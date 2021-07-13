@@ -1,11 +1,7 @@
 
 pragma solidity >=0.5.16 <0.8.0;
 
-// import "@openzeppelin/contracts/token/ERC777/ERC777.sol";
-// import "@openzeppelin/contracts/introspection/IERC1820Registry.sol";
-// import "@openzeppelin/contracts/token/ERC777/IERC777Recipient.sol";
-// import "@openzeppelin/contracts/token/ERC777/IERC777.sol";
-// import "@openzeppelin/contracts/introspection/IERC1820Registry.sol";
+
 import "@nomiclabs/buidler/console.sol";
 import './interfaces/IChaingeDexPair.sol';
 
@@ -14,6 +10,8 @@ import './interfaces/IERC777Sender.sol';
 
 import './ERC1820Implementer.sol';
 import './interfaces/IERC1820Registry.sol';
+
+// import './interfaces/IMinning.sol';
 
 library SafeMath {
     function add(uint x, uint y) internal pure returns (uint z) {
@@ -39,9 +37,7 @@ contract Minning is IERC777Sender, ERC1820Implementer {
 
     using SafeMath for uint256;
 
-    address public _owner;
-
-    address public chaingeDexPair;
+    address public owner;
 
     bytes4 private constant SELECTOR = bytes4(keccak256(bytes('transferFrom(address,address,uint256)')));
 
@@ -56,12 +52,23 @@ contract Minning is IERC777Sender, ERC1820Implementer {
 
     // mapping ( address => uint256 ) reward; // 奖励倍数, 奖励倍数设置了，才可以计算收益
 
-    uint256 public rewardValue;
-    uint256 public rewardPairDirection;
-    uint256 public chng;
-    address public cashbox;
-    address public rewardToken;
+    // 多账户情况下换成map
+    // uint256 public rewardValue;
+    // uint256 public rewardPairDirection;
+    // uint256 public chng;
+    // address public cashbox;
+    // address public rewardToken;
+
+    struct Pool{
+        uint256  rewardValue;
+        uint256  rewardPairDirection;
+        uint256  chng;
+        address  cashbox;
+        address  rewardToken;
+        uint256  totalAmount; // 池子里所有的LP
+    }
     
+    mapping (address => Pool) rewardConfig;
 
     struct User{
         uint256 totalRewardBalance; // 总收益
@@ -70,53 +77,42 @@ contract Minning is IERC777Sender, ERC1820Implementer {
         uint256 LPAmount; // LP数量
     }
 
-    mapping (address => User) balances; // 奖励金额缓存
-
-    uint256 public totalAmount;
+    mapping (address => mapping (address => User)) balances; // 奖励金额缓存
 
     modifier onlyOwner() {
-        require(_owner == msg.sender, 'ChaingeDex: require sender is feeToSetter');
+        require(owner == msg.sender, 'ChaingeDex: require sender is feeToSetter');
         _;
     }
 
-    constructor(address _chaingeDexPair, uint256 _rewardValue,  uint256 _rewardPairDirection, address _cashbox, address _rewardToken ) public {
-        // _erc1820.setInterfaceImplementer(address(this), TOKENS_RECIPIENT_INTERFACE_HASH, address(this));
-        _owner = msg.sender;
-        // _token = token;
-        chaingeDexPair = _chaingeDexPair;
+    constructor(address _owner) public {
+        owner = _owner;
+    }
 
-        rewardValue = _rewardValue; // 测试
-
+    function setRewardConfig(address _chaingeDexPair, uint256 _rewardValue,  uint256 _rewardPairDirection, address _cashbox, address _rewardToken ) public onlyOwner {
+         uint256 chng = 2993519;
         require(_rewardPairDirection == 0 || _rewardPairDirection == 1, 'Hooks setRewardPairDirection: Invalid value');
-        rewardPairDirection = _rewardPairDirection;
+        rewardConfig[_chaingeDexPair] = Pool(_rewardValue,_rewardPairDirection, chng, _cashbox,_rewardToken, 0);
 
-        cashbox = _cashbox;
-
-        rewardToken = _rewardToken;
-
-        chng = 2993519;
-
-        _registerInterfaceForAddress(TOKENS_RECIPIENT_INTERFACE_HASH, _chaingeDexPair);
-        _registerInterfaceForAddress(_TOKENS_SENDER_INTERFACE_HASH, _chaingeDexPair);
+         _registerInterfaceForAddress(_TOKENS_SENDER_INTERFACE_HASH, _chaingeDexPair);
     }
 
-    function setReward(uint256 value) public onlyOwner {
-       rewardValue = value;
+
+    function setReward(address _chaingeDexPair,uint256 value) public onlyOwner {
+        rewardConfig[_chaingeDexPair].rewardValue = value;
     }
 
-    function setRewardPairDirection(uint256 value) public onlyOwner {
+    function setRewardPairDirection(address _chaingeDexPair,uint256 value) public onlyOwner {
       require(value == 0 || value == 1, 'Hooks setRewardPairDirection: Invalid value');
-      rewardPairDirection = value;
+       rewardConfig[_chaingeDexPair].rewardPairDirection = value;
     }
 
-    function setCashbox(address _cashbox) public onlyOwner {
-        cashbox = _cashbox;
+    function setCashbox(address _chaingeDexPair, address _cashbox) public onlyOwner {
+        rewardConfig[_chaingeDexPair].cashbox = _cashbox;
     }
 
-    function setCHNG(uint256 amount) public onlyOwner {
-        chng = amount;
+    function setCHNG(address _chaingeDexPair, uint256 amount) public onlyOwner {
+        rewardConfig[_chaingeDexPair].chng = amount;
     }
-
 
   // 只需要监听send就够了。 当mint发送的时候。 全0地址为from， 上账。 当不是全0地址为from，下账。
   function tokensToSend(
@@ -128,47 +124,45 @@ contract Minning is IERC777Sender, ERC1820Implementer {
       bytes calldata operatorData
   ) external override {
 
-    if(rewardValue ==0){
+    if(rewardConfig[operator].rewardValue ==0){
         return; // 未设置倍数， 但是这里不能报错，未设置只是不记账而已。
     }
 
     if(from == address(0)) { // mint
       
-      settlementReward(to);
-      addBalance(to, amount);
+      settlementReward(operator, to);
+      addBalance(operator ,to, amount);
       
     } else {
         // 转账出去, 不管你转给谁，都视为移除LP, 这里取form
-        settlementReward(from);
-        subBalance(from, amount); // 减去 amount
-        uint256 amount = rewardOf(from); 
-        _withdraw(from, amount);
+        settlementReward(operator, from);
+        subBalance(operator, from, amount); // 减去 amount
+        uint256 rewardAmount = rewardOf(operator, from); 
+        _withdraw(operator, from, rewardAmount);
 
-        if(to != chaingeDexPair) { // 如果不是转个pair 合约，那么就给新地址上账
-          settlementReward(to);
-          addBalance(to, amount);
+        if(to != operator && to != address(0)) { // 如果不是转个pair 合约，那么就给新地址上账
+          settlementReward(operator, to);
+          addBalance(operator, to, amount);
         }
     }
   }
     // 每天的奖励 = 奖励倍数 * 0.0025CHNG * B池子数量 * 用户占池子比例
-  function computeReward(address from, User memory user, uint256 _totalAmount, uint256 endTime, uint256 pool, uint256 rewardMultiple, uint256 chng) internal  pure  returns(uint256 _reward) {
+  function computeReward(address from, User memory user, uint256 endTime, uint256 _reserve, Pool memory pool) internal  pure  returns(uint256 _reward) {
     if( user.LPAmount == 0 || user.lastSettleTime == 0) {
         return 0;
     }
 
     uint256 timeDiff = endTime - user.lastSettleTime;
-    _reward = (timeDiff * rewardMultiple * chng * pool * ( user.LPAmount / _totalAmount  )) / 1000000000000000;
+    _reward = (timeDiff * pool.rewardValue * pool.chng * _reserve * ( user.LPAmount / pool.totalAmount  )) / 1000000000000000;
   }
 
   // 结算奖励
-  function settlementReward(address from) internal {
-      User storage user =  balances[from];
+  function settlementReward(address chaingeDexPair, address from) internal {
+      User storage user =  balances[chaingeDexPair][from];
       ( uint reserve0, uint reserve1,) = IChaingeDexPair(chaingeDexPair).getReserves(); 
-      uint256 _pool = rewardPairDirection == 0 ? reserve0: reserve1;
+      uint256 _reserve = rewardConfig[chaingeDexPair].rewardPairDirection == 0 ? reserve0: reserve1;
 
-      console.log('timeDiff', block.timestamp - user.lastSettleTime);
-
-      uint256 reward = computeReward(from, user, totalAmount, block.timestamp, _pool, rewardValue, chng);
+      uint256 reward = computeReward(from, user, block.timestamp, _reserve, rewardConfig[chaingeDexPair]);
       if(reward == 0) {
           return;
       }
@@ -179,43 +173,43 @@ contract Minning is IERC777Sender, ERC1820Implementer {
   }
 
     // 收益余额 = 动态计算出里的余额 + 已结算余额
-  function rewardOf(address from) view public returns (uint256) {
-      User storage user =  balances[from];
+  function rewardOf(address chaingeDexPair, address from) view public returns (uint256) {
+      User storage user =  balances[chaingeDexPair][from];
       ( uint reserve0, uint reserve1, ) = IChaingeDexPair(chaingeDexPair).getReserves();
 
-      uint256 _pool = rewardPairDirection == 0 ? reserve0: reserve1;
-      
-      uint256 reward = computeReward(from, user, totalAmount , block.timestamp, _pool, rewardValue, chng);
+      uint256 _reserve = rewardConfig[chaingeDexPair].rewardPairDirection == 0 ? reserve0: reserve1;
+
+      uint256 reward = computeReward(from, user , block.timestamp, _reserve, rewardConfig[chaingeDexPair]);
       return reward + user.rewardBalance;
   } 
 
     // 提取余额 
-  function withdraw(uint256 amount) public {
-      _withdraw(msg.sender, amount);
+  function withdraw(address chaingeDexPair, uint256 amount) public {
+      _withdraw(chaingeDexPair, msg.sender, amount);
   }
 
-  function _withdraw(address from, uint256 amount) private {
-      User storage user =  balances[from];
-      settlementReward(from);
+  function _withdraw(address chaingeDexPair, address from, uint256 amount) private {
+      User storage user =  balances[chaingeDexPair][from];
+      settlementReward(chaingeDexPair, from);
       require(user.rewardBalance > 0, 'Hooks: rewardBalance = 0');
 
-      _safeTransfer(rewardToken, cashbox, from, amount);
+      _safeTransfer(rewardConfig[chaingeDexPair].rewardToken, rewardConfig[chaingeDexPair].cashbox, from, amount);
       user.rewardBalance = user.rewardBalance.sub(amount);
   }
 
   // 添加余额, 测试的时候设置为public从外部调用。 上线后，则不允许外部调用。需要哎回调钩子里调用。
-  function addBalance(address from, uint256 amount) private {
-    balances[from].LPAmount += amount;
-    totalAmount += amount;
+  function addBalance(address chaingeDexPair, address from, uint256 amount) private {
+    balances[chaingeDexPair][from].LPAmount += amount;
+    rewardConfig[chaingeDexPair].totalAmount += amount;
 
-    if( balances[from].lastSettleTime == 0) {
-        balances[from].lastSettleTime = block.timestamp - 600; // 测试: 把时间往前移 100000 秒
+    if( balances[chaingeDexPair][from].lastSettleTime == 0) {
+        balances[chaingeDexPair][from].lastSettleTime = block.timestamp - 600; // 测试: 把时间往前移 100000 秒
     }
   }
 
-  function subBalance(address from, uint256 amount) private {
-     balances[from].LPAmount = balances[from].LPAmount.sub(amount);
-     totalAmount = totalAmount.sub(amount);
+  function subBalance(address chaingeDexPair, address from, uint256 amount) private {
+     balances[chaingeDexPair][from].LPAmount = balances[chaingeDexPair][from].LPAmount.sub(amount);
+     rewardConfig[chaingeDexPair].totalAmount = rewardConfig[chaingeDexPair].totalAmount.sub(amount);
   }
 
   function _safeTransfer(address token, address from, address to, uint value) private {

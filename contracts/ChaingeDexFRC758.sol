@@ -129,6 +129,8 @@ contract ChaingeDexFRC758 is IFRC758{
             operatorApprovals[_from][msg.sender] = operatorApprovals[_from][msg.sender].sub(amount);
          }
 
+        _callTokensToSend(address(this), _from, _to, amount, "", "");
+
         if(amount <= balance[_from]) {
 
             balance[_from] = balance[_from].sub(amount);
@@ -161,6 +163,11 @@ contract ChaingeDexFRC758 is IFRC758{
         require(_from != _to, "FRC758: can not send to yourself");
         if(tokenStart < block.timestamp) tokenStart = block.timestamp;
         require(tokenStart < tokenEnd, "FRC758: tokenStart>=tokenEnd");
+
+        if(tokenEnd == MAX_TIME) {
+            _callTokensToSend(address(this), _from, _to, amount, "", ""); 
+        }
+
         uint256 timeBalance = timeBalanceOf(_from, tokenStart, tokenEnd); 
 
         if(amount <= timeBalance) {
