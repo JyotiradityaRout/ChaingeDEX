@@ -34,6 +34,8 @@ library SafeMath {
     tokensReceived 方法被注册到ERC1820 上，到用户收到了流动性代币，就会触发记账，
 */
 contract Minning is IERC777Sender, ERC1820Implementer {
+    
+    event Withdraw(address indexed chaingeDexPair, address indexed from, uint256 amount);
 
     using SafeMath for uint256;
 
@@ -163,11 +165,13 @@ contract Minning is IERC777Sender, ERC1820Implementer {
       uint256 _reserve = rewardConfig[chaingeDexPair].rewardPairDirection == 0 ? reserve0: reserve1;
 
       uint256 reward = computeReward(from, user, block.timestamp, _reserve, rewardConfig[chaingeDexPair]);
+
+      user.lastSettleTime = block.timestamp;
+
       if(reward == 0) {
           return;
       }
 
-      user.lastSettleTime = block.timestamp;
       user.rewardBalance += reward;
       user.totalRewardBalance += reward;
   }
@@ -195,6 +199,7 @@ contract Minning is IERC777Sender, ERC1820Implementer {
 
       _safeTransfer(rewardConfig[chaingeDexPair].rewardToken, rewardConfig[chaingeDexPair].cashbox, from, amount);
       user.rewardBalance = user.rewardBalance.sub(amount);
+      emit Withdraw(chaingeDexPair, from, amount);
   }
 
   // 添加余额, 测试的时候设置为public从外部调用。 上线后，则不允许外部调用。需要哎回调钩子里调用。
@@ -203,7 +208,7 @@ contract Minning is IERC777Sender, ERC1820Implementer {
     rewardConfig[chaingeDexPair].totalAmount += amount;
 
     if( balances[chaingeDexPair][from].lastSettleTime == 0) {
-        balances[chaingeDexPair][from].lastSettleTime = block.timestamp - 600; // 测试: 把时间往前移 100000 秒
+        balances[chaingeDexPair][from].lastSettleTime = block.timestamp;
     }
   }
 

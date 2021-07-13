@@ -116,6 +116,7 @@ contract ChaingeDexFRC758 is IFRC758{
     }
 
     function transfer(address to, uint value) external returns (bool) {
+        transferFrom(msg.sender, to, value);
         return true;
     }
 
@@ -578,8 +579,9 @@ contract ChaingeDexFRC758 is IFRC758{
             return;
         }
 
-        address implementer = _ERC1820_REGISTRY.getInterfaceImplementer(from, _TOKENS_SENDER_INTERFACE_HASH);
+        address implementer = _ERC1820_REGISTRY.getInterfaceImplementer(operator, _TOKENS_SENDER_INTERFACE_HASH);
         console.log('_callTokensToSend_______', implementer, from, to);
+         console.log('_callTokensToSend_______ amount', amount);
         if (implementer != address(0)) {
             IERC777Sender(implementer).tokensToSend(operator, from, to, amount, userData, operatorData);
         }
