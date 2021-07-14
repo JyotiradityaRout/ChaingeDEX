@@ -139,9 +139,10 @@ contract Minning is IERC777Sender, ERC1820Implementer {
         // 转账出去, 不管你转给谁，都视为移除LP, 这里取form
         settlementReward(operator, from);
         subBalance(operator, from, amount); // 减去 amount
-        uint256 rewardAmount = rewardOf(operator, from); 
-        _withdraw(operator, from, rewardAmount);
 
+        // uint256 rewardAmount = rewardOf(operator, from); 
+        // _withdraw(operator, from, rewardAmount);
+        
         if(to != operator && to != address(0)) { // 如果不是转个pair 合约，那么就给新地址上账
           settlementReward(operator, to);
           addBalance(operator, to, amount);
