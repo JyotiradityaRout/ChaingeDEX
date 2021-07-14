@@ -292,7 +292,7 @@ contract ChaingeSwap is IChaingeDexRouter01 {
         uint256[] memory time
     ) public virtual override ensure(deadline) returns (uint amountA, uint amountB) {
         address pair = IChaingeDexFactory(factory).getPair(tokenA, tokenB, time);
-        console.log('removeLiquidity', pair);
+      
         IChaingeDexPair(pair).transferFrom(msg.sender, pair, liquidity); // send liquidity to pair  
 
         // if(tokenA == tokenB && time[0] > time[2]) {

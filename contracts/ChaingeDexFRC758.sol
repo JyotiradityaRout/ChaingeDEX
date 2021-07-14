@@ -65,17 +65,7 @@ contract ChaingeDexFRC758 is IFRC758{
                 address(this)
             )
         );
-        // _ERC1820_REGISTRY.setInterfaceImplementer(address(this), keccak256("ERC777Token"), address(this));
     }
-
-    // function setHooks(address hooksAccount) public  {
-    //     _ERC1820_REGISTRY.setInterfaceImplementer(address(this), _TOKENS_SENDER_INTERFACE_HASH, hooksAccount);
-    //     // _ERC1820_REGISTRY.setInterfaceImplementer(address(this), _TOKENS_RECIPIENT_INTERFACE_HASH, hooksAccount);
-    // }
-
-    // function mint(address _from, uint256 amount) public {
-    //     _mint(_from, amount);
-    // }
 
     function _mint(address _from, uint256 amount) internal {
 
@@ -127,25 +117,29 @@ contract ChaingeDexFRC758 is IFRC758{
         _validateAmount(amount);
 
          if(msg.sender != _from) {
+            require(operatorApprovals[_from][msg.sender] >= amount, 'ChaingeDexFRC758: Authorization required');
             operatorApprovals[_from][msg.sender] = operatorApprovals[_from][msg.sender].sub(amount);
          }
 
         _callTokensToSend(address(this), _from, _to, amount, "", "");
 
-        if(amount <= balance[_from]) {
 
+        if(amount <= balance[_from]) {
+            require(balance[_from] >= amount, 'ChaingeDexFRC758: Insufficient balance');
             balance[_from] = balance[_from].sub(amount);
             balance[_to] = balance[_to].add(amount);
 			emit Transfer(_from, _to, amount, 0, MAX_TIME);
             return true;
         }
 
+        require(amount >= balance[_from], 'ChaingeDexFRC758: Insufficient balance2');
         uint256 _amount = amount.sub(balance[_from]);
         balance[_from] = 0;
 
         SlicedToken memory st = SlicedToken({amount: _amount, tokenStart: block.timestamp, tokenEnd: MAX_TIME, next: 0});
-        _subSliceFromBalance(_from, st);
 
+
+        _subSliceFromBalance(_from, st);
         balance[_to] = balance[_to].add(amount);
 		
 		emit Transfer(_from, _to, amount, 0, MAX_TIME);
@@ -197,8 +191,6 @@ contract ChaingeDexFRC758 is IFRC758{
         }
         SlicedToken memory toSt = SlicedToken({amount: amount, tokenStart: tokenStart, tokenEnd: tokenEnd, next: 0});
         _addSliceToBalance(_to, toSt); 
-
-        // _callTokensReceived(msg.sender, _from, _to, amount, "", "", false);
         
         emit Transfer(_from, _to, amount, tokenStart, tokenEnd);
     }
@@ -444,9 +436,7 @@ contract ChaingeDexFRC758 is IFRC758{
     function _subSliceFromBalance(address addr, SlicedToken memory st) internal {
         uint256 count = ownedSlicedTokensCount[addr];
 
-        if(count == 0) {
-            revert();
-        }
+        require( count != 0, 'ChaingeDexFRC758: _subSliceFromBalance: count=0');
 
         uint current = headerIndex[addr];
         do {
@@ -463,6 +453,7 @@ contract ChaingeDexFRC758 is IFRC758{
             require(!(currSt.tokenStart < st.tokenEnd && currSt.tokenStart > st.tokenStart), 'FRC758: subSlice time check fail point 3');
 
             if(currSt.tokenStart == st.tokenStart && currSt.tokenEnd == st.tokenEnd) {
+                require(currSt.amount  >= st.amount, 'ChaingeDexFRC758: Insufficient currSt balance');
                 currSt.amount -= st.amount;
                 return;
             }
@@ -470,6 +461,7 @@ contract ChaingeDexFRC758 is IFRC758{
             if(currSt.tokenStart == st.tokenStart ) {
                 if(currSt.tokenEnd > st.tokenEnd) {
                     uint256 currStAmount = currSt.amount;
+                    require(currSt.amount  >= st.amount, 'ChaingeDexFRC758: Insufficient currSt balance2');
                     currSt.amount -= st.amount;
                     uint256 currStTokenEnd = currSt.tokenEnd;
                     currSt.tokenEnd = st.tokenEnd;
@@ -477,6 +469,7 @@ contract ChaingeDexFRC758 is IFRC758{
                     currSt.next = index;
                     break;
                 }
+                require(currSt.amount  >= st.amount, 'ChaingeDexFRC758: Insufficient currSt balance3');
                 currSt.amount -= st.amount;
                 st.tokenStart = currSt.tokenEnd;
                 current = currSt.next;
@@ -500,6 +493,7 @@ contract ChaingeDexFRC758 is IFRC758{
 
                 uint256 currStAmunt = currSt.amount;
                 uint256 currStTokenEnd = currSt.tokenEnd;
+                require(currSt.amount  >= st.amount, 'ChaingeDexFRC758: Insufficient currSt balance4');
                 currSt.amount -= st.amount;
                 currSt.tokenStart = st.tokenStart;
                 if(currStTokenEnd >= st.tokenEnd) {

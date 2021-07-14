@@ -80,10 +80,4 @@ contract ChaingeDexFactory is IChaingeDexFactory {
 
         emit PairCreated(token0, token1, pair, allPairs.length, _time);
     }
-
-    // function initializeHooks(address pair, address hooks) public {
-    //     require(msg.sender == feeToSetter, 'ChaingeDex: FORBIDDEN');
-    //     console.log('initializeHooks', pair, hooks);
-    //     // IChaingeDexPair(pair).initializeHooks(hooks);
-    // }
 }

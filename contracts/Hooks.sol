@@ -142,7 +142,6 @@ contract Minning is IERC777Sender, ERC1820Implementer {
 
         // uint256 rewardAmount = rewardOf(operator, from); 
         // _withdraw(operator, from, rewardAmount);
-        
         if(to != operator && to != address(0)) { // 如果不是转个pair 合约，那么就给新地址上账
           settlementReward(operator, to);
           addBalance(operator, to, amount);
@@ -150,7 +149,7 @@ contract Minning is IERC777Sender, ERC1820Implementer {
     }
   }
     // 每天的奖励 = 奖励倍数 * 0.0025CHNG * B池子数量 * 用户占池子比例
-  function computeReward(address from, User memory user, uint256 endTime, uint256 _reserve, Pool memory pool) internal  pure  returns(uint256 _reward) {
+  function computeReward(User memory user, uint256 endTime, uint256 _reserve, Pool memory pool) internal  pure  returns(uint256 _reward) {
     if( user.LPAmount == 0 || user.lastSettleTime == 0) {
         return 0;
     }
@@ -165,7 +164,7 @@ contract Minning is IERC777Sender, ERC1820Implementer {
       ( uint reserve0, uint reserve1,) = IChaingeDexPair(chaingeDexPair).getReserves(); 
       uint256 _reserve = rewardConfig[chaingeDexPair].rewardPairDirection == 0 ? reserve0: reserve1;
 
-      uint256 reward = computeReward(from, user, block.timestamp, _reserve, rewardConfig[chaingeDexPair]);
+      uint256 reward = computeReward( user, block.timestamp, _reserve, rewardConfig[chaingeDexPair]);
 
       user.lastSettleTime = block.timestamp;
 
@@ -184,7 +183,7 @@ contract Minning is IERC777Sender, ERC1820Implementer {
 
       uint256 _reserve = rewardConfig[chaingeDexPair].rewardPairDirection == 0 ? reserve0: reserve1;
 
-      uint256 reward = computeReward(from, user , block.timestamp, _reserve, rewardConfig[chaingeDexPair]);
+      uint256 reward = computeReward(user , block.timestamp, _reserve, rewardConfig[chaingeDexPair]);
       return reward + user.rewardBalance;
   } 
 
