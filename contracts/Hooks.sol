@@ -98,7 +98,6 @@ contract Minning is IERC777Sender, ERC1820Implementer {
          _registerInterfaceForAddress(_TOKENS_SENDER_INTERFACE_HASH, _chaingeDexPair);
     }
 
-
     function setReward(address _chaingeDexPair,uint256 value) public onlyOwner {
         rewardConfig[_chaingeDexPair].rewardValue = value;
     }
@@ -126,17 +125,21 @@ contract Minning is IERC777Sender, ERC1820Implementer {
       bytes calldata operatorData
   ) external override {
 
+    require(operator == msg.sender, 'Permission denied');
+
     if(rewardConfig[operator].rewardValue ==0){
         return; // 未设置倍数， 但是这里不能报错，未设置只是不记账而已。
     }
 
     if(from == address(0)) { // mint
-      
       settlementReward(operator, to);
       addBalance(operator ,to, amount);
       
     } else {
         // 转账出去, 不管你转给谁，都视为移除LP, 这里取form
+        if( balances[operator][from].lastSettleTime == 0) { // 根本没入账。
+            return;
+        }
         settlementReward(operator, from);
         subBalance(operator, from, amount); // 减去 amount
 
@@ -155,7 +158,8 @@ contract Minning is IERC777Sender, ERC1820Implementer {
     }
 
     uint256 timeDiff = endTime - user.lastSettleTime;
-    _reward = (timeDiff * pool.rewardValue * pool.chng * _reserve * ( user.LPAmount / pool.totalAmount  )) / 1000000000000000;
+
+    _reward = (timeDiff * pool.rewardValue * pool.chng * _reserve * ( (user.LPAmount * 10000000000000000000000000000) / pool.totalAmount  )) / 1000000000000000 / 10000000000000000000000000000;
   }
 
   // 结算奖励
@@ -184,6 +188,7 @@ contract Minning is IERC777Sender, ERC1820Implementer {
       uint256 _reserve = rewardConfig[chaingeDexPair].rewardPairDirection == 0 ? reserve0: reserve1;
 
       uint256 reward = computeReward(user , block.timestamp, _reserve, rewardConfig[chaingeDexPair]);
+
       return reward + user.rewardBalance;
   } 
 
@@ -213,6 +218,9 @@ contract Minning is IERC777Sender, ERC1820Implementer {
   }
 
   function subBalance(address chaingeDexPair, address from, uint256 amount) private {
+     require(balances[chaingeDexPair][from].LPAmount >= amount, 'Minning: subBalance error');
+     require(rewardConfig[chaingeDexPair].totalAmount >= amount, 'Minning: subBalance error');
+     
      balances[chaingeDexPair][from].LPAmount = balances[chaingeDexPair][from].LPAmount.sub(amount);
      rewardConfig[chaingeDexPair].totalAmount = rewardConfig[chaingeDexPair].totalAmount.sub(amount);
   }

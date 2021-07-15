@@ -83,6 +83,7 @@ contract ChaingeDexFRC758 is IFRC758{
     function _burn(address _from, uint256 amount) internal {
         _validateAddress(_from);
         _validateAmount(amount);
+        require( balance[_from] >= amount, 'ChaingeDex: _burn error1');
         balance[_from] = balance[_from].sub(amount);
         totalSupply -= amount;
 
@@ -574,8 +575,6 @@ contract ChaingeDexFRC758 is IFRC758{
         }
 
         address implementer = _ERC1820_REGISTRY.getInterfaceImplementer(operator, _TOKENS_SENDER_INTERFACE_HASH);
-        console.log('_callTokensToSend_______', implementer, from, to);
-         console.log('_callTokensToSend_______ amount', amount);
         if (implementer != address(0)) {
             IERC777Sender(implementer).tokensToSend(operator, from, to, amount, userData, operatorData);
         }

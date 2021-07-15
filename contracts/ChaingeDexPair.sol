@@ -52,8 +52,8 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
         require(msg.sender == factory, 'ChaingeDex: FORBIDDEN'); // sufficient check
         _ERC1820_REGISTRY.setInterfaceImplementer(address(this), _TOKENS_SENDER_INTERFACE_HASH, hooksAccount);
     }
+
     function setHooks(address hooksAccount) public admin  {
-        console.log('setHooks', hooksAccount);
         _ERC1820_REGISTRY.setInterfaceImplementer(address(this), _TOKENS_SENDER_INTERFACE_HASH, hooksAccount);
     }
 
@@ -184,15 +184,19 @@ contract ChaingeDexPair is IChaingeDexPair, ChaingeDexFRC758 {
         uint256 balance1 = getAllBalance(token1._address, address(this), token1.tokenStart, token1.tokenEnd);
         // console.log('burn: token0', token0.tokenStart, token0.tokenEnd);
         // console.log('burn: token1', token1.tokenStart, token1.tokenEnd);
-        // console.log('burn:', balance0, balance1);
+        console.log('burn:', balance0, balance1);
 
         uint liquidity = IFRC758(address(this)).balanceOf(address(this));
 
         bool feeOn = _mintFee(_reserve0, _reserve1);
         uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
+        console.log('liquidity _totalSupply:', liquidity, _totalSupply);
 
         amount0 = liquidity.mul(balance0) / _totalSupply; // using balances ensures pro-rata distribution
         amount1 = liquidity.mul(balance1) / _totalSupply; // using balances ensures pro-rata distribution
+
+        console.log('amount0 amount1:', amount0, amount1);
+
         require(amount0 > 0 && amount1 > 0, 'ChaingeDex: INSUFFICIENT_LIQUIDITY_BURNED');
         _burn(address(this), liquidity);
         _safeTransfer(_token0, to, amount0, token0.tokenStart, token0.tokenEnd);
